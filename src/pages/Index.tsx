@@ -155,7 +155,6 @@ export default function Index() {
               {screen === 'chat' && (
                 <ChatScreen
                   onViewResults={() => setScreen('results')}
-                  predictionResult={predictionResult}
                   setPredictionResult={setPredictionResult}
                 />
               )}

@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { corsHeaders } from './middleware/auth.js';
+import * as datasetService from './services/dataset.service.js';
 import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import reminderRoutes from './routes/reminder.js';
@@ -19,9 +20,9 @@ const PORT = process.env.BACKEND_PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Get allowed origins from environment
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:5173', 'http://localhost:3000'];
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'];
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
@@ -107,6 +108,15 @@ app.listen(PORT, async () => {
   console.log(`📋 History endpoint: http://localhost:${PORT}/api/history`);
   console.log(`📊 Dataset endpoint: http://localhost:${PORT}/api/datasets`);
   
+  // Pre-warm dataset cache so first diagnosis request isn't slow
+  console.log('\n⏳ Pre-loading disease dataset (182MB) into memory cache...');
+  try {
+    const profiles = datasetService.loadDiseaseProfiles();
+    console.log(`✅ Disease dataset loaded: ${profiles.length} disease profiles cached`);
+  } catch (e) {
+    console.warn('⚠️  Dataset pre-load failed (RAG will load on first request):', e);
+  }
+
   // Check ML service availability
   console.log('\n⏳ Checking ML service status...');
   try {

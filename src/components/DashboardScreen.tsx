@@ -95,14 +95,18 @@ export default function DashboardScreen({ user, onStartCheck, onToast }: Props) 
     return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   };
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const firstName = user?.name?.trim().split(/\s+/)[0] || 'there';
+
   const Skeleton = () => <div className="skeleton-shimmer rounded-2xl h-20" />;
 
   return (
     <div className="screen-fade max-w-[1000px] mx-auto px-5 py-10">
       <div className="flex items-start justify-between mb-8 flex-wrap gap-2">
         <div>
-          <h1 className="font-heading font-extrabold text-2xl">Good morning, {user?.name} 👋</h1>
-          <p className="text-muted-foreground text-[15px]">Here's your health overview</p>
+          <h1 className="font-heading font-extrabold text-2xl">{greeting}, {firstName} <span aria-hidden="true">👋</span></h1>
+          <p className="text-muted-foreground text-[15px]">Here’s your health overview</p>
         </div>
         <span className="text-muted-foreground text-sm">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
       </div>

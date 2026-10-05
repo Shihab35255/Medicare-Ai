@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, HelpCircle, CheckCircle, AlertCircle, Stethoscope } from 'lucide-react';
+import { Send, HelpCircle, CheckCircle, AlertCircle, Stethoscope, AlertTriangle, Sparkles } from 'lucide-react';
 import { extractAndPredict, getFollowUpQuestions, submitFollowUpAnswers, saveToHistory } from '@/api/config';
 
 export interface ChatMessage {
@@ -15,8 +15,7 @@ export interface ChatMessage {
 
 interface Props {
   onViewResults: () => void;
-  predictionResult: any;
-  setPredictionResult: (r: any) => void;
+  setPredictionResult: (result: Record<string, unknown>) => void;
 }
 
 const quickChips = [
@@ -24,7 +23,7 @@ const quickChips = [
   '😴 Fatigue', '💔 Chest Pain', '🦴 Joint Pain', '😵 Dizziness', '🤧 Runny Nose', '🥵 Chills'
 ];
 
-export default function ChatScreen({ onViewResults, predictionResult, setPredictionResult }: Props) {
+export default function ChatScreen({ onViewResults, setPredictionResult }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [chatPhase, setChatPhase] = useState<'input' | 'followup' | 'done'>('input');
@@ -34,6 +33,8 @@ export default function ChatScreen({ onViewResults, predictionResult, setPredict
   const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [followUpAnswers, setFollowUpAnswers] = useState<{ question: string; answer: string }[]>([]);
+  const [followUpInput, setFollowUpInput] = useState('');
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -71,16 +72,28 @@ export default function ChatScreen({ onViewResults, predictionResult, setPredict
     const fRes = await getFollowUpQuestions(res.symptoms_found);
     setIsTyping(false);
 
-    if (fRes.error) { addMsg({ role: 'ai', type: 'error', content: fRes.error }); return; }
+    if (fRes.error) {
+      addMsg({ role: 'ai', type: 'error', content: fRes.error });
+      setChatPhase('input');
+      return;
+    }
+    if (!Array.isArray(fRes.questions) || fRes.questions.length === 0) {
+      addMsg({ role: 'ai', type: 'error', content: 'I could not prepare follow-up questions. Please start a new check and try again.' });
+      setChatPhase('input');
+      return;
+    }
     setFollowUpQuestions(fRes.questions);
     setCurrentQIndex(0);
     addMsg({ role: 'ai', type: 'followup', content: fRes.questions[0], questionIndex: 0 });
   };
 
-  const handleFollowUpAnswer = async (answer: 'yes' | 'no') => {
+  const handleFollowUpAnswer = async (answer: string) => {
+    if (isSubmittingAnswer) return;
+    setIsSubmittingAnswer(true);
     const question = followUpQuestions[currentQIndex];
     const newAnswers = [...followUpAnswers, { question, answer }];
     setFollowUpAnswers(newAnswers);
+    setFollowUpInput('');
 
     // Mark answered
     setMessages(prev => prev.map(m =>
@@ -90,16 +103,19 @@ export default function ChatScreen({ onViewResults, predictionResult, setPredict
     const nextIdx = currentQIndex + 1;
     if (nextIdx < followUpQuestions.length) {
       setCurrentQIndex(nextIdx);
-      setTimeout(() => addMsg({ role: 'ai', type: 'followup', content: followUpQuestions[nextIdx], questionIndex: nextIdx }), 500);
+      setTimeout(() => {
+        addMsg({ role: 'ai', type: 'followup', content: followUpQuestions[nextIdx], questionIndex: nextIdx });
+        setIsSubmittingAnswer(false);
+      }, 500);
     } else {
       addMsg({ role: 'ai', type: 'text', content: "Got it! I have all the information I need. Let me analyze everything now..." });
       setChatPhase('done');
       setIsTyping(true); setTypingText('Analyzing with ML model...');
       const res = await submitFollowUpAnswers(currentSymptoms, newAnswers);
       setIsTyping(false);
-      if (res.error) { addMsg({ role: 'ai', type: 'error', content: res.error }); return; }
+      if (res.error) { addMsg({ role: 'ai', type: 'error', content: res.error }); setIsSubmittingAnswer(false); return; }
       
-      setPredictionResult(res);
+      setPredictionResult({ ...res, follow_up_answers: newAnswers });
       
       // Save to history
       const saveRes = await saveToHistory({
@@ -112,7 +128,7 @@ export default function ChatScreen({ onViewResults, predictionResult, setPredict
       if (saveRes.error) {
         console.warn('Save history failed:', saveRes.error);
       } else {
-        addMsg({ role: 'ai', type: 'text', content: `Analysis saved to your history! (${res.confidence}% match for ${res.disease})` });
+        addMsg({ role: 'ai', type: 'text', content: `Analysis saved to your history! (pattern score: ${res.confidence}%)` });
       }
       
       addMsg({ role: 'ai', type: 'result_ready', content: 'Your results are ready. Click below to view your full report.' });
@@ -144,18 +160,28 @@ export default function ChatScreen({ onViewResults, predictionResult, setPredict
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
         {messages.length === 0 && (
-          <div className="text-center pt-12">
-            <div className="text-5xl mb-3">🩺</div>
-            <h2 className="font-heading font-bold text-xl mb-2">Hi, I'm MediCare AI</h2>
-            <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">Describe your symptoms and I'll help analyze them using AI.</p>
-            <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+          <div className="mx-auto max-w-2xl pt-8 sm:pt-12">
+            <div className="mb-7 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[22px] bg-primary-light text-primary shadow-soft">
+                <Stethoscope className="h-8 w-8" />
+              </div>
+              <h2 className="font-heading text-2xl font-extrabold">Let’s start with how you feel</h2>
+              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+                Include what you’re feeling, when it began, and anything that makes it better or worse. Pick a few suggestions or write in your own words.
+              </p>
+            </div>
+            <div className="mb-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              <Sparkles className="h-4 w-4 text-primary" /> Common symptoms
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
               {quickChips.map(c => (
                 <button key={c} onClick={() => setInput(prev => prev ? prev + ', ' + c.slice(2).trim() : c.slice(2).trim())}
-                  className="bg-card border border-border rounded-full px-3.5 py-1.5 text-xs hover:border-primary hover:bg-primary-light hover:text-primary transition-all">
+                  className="rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary-light hover:text-primary">
                   {c}
                 </button>
               ))}
             </div>
+            <p className="mt-3 text-center text-xs text-muted-foreground">Tap to add a symptom to your message — nothing is sent until you press the arrow.</p>
           </div>
         )}
 
@@ -184,12 +210,28 @@ export default function ChatScreen({ onViewResults, predictionResult, setPredict
                   <p className="text-[15px] mb-3">{m.content}</p>
                   {m.answered ? (
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${m.answered === 'yes' ? 'bg-secondary/30 text-secondary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      {m.answered === 'yes' ? '✓ Yes' : '✗ No'}
+                      Your answer: {m.answered}
                     </span>
                   ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleFollowUpAnswer('yes')} className="btn-pill bg-secondary/30 text-secondary-foreground px-7 py-2 text-sm hover:bg-secondary/50">✓ Yes</button>
-                      <button onClick={() => handleFollowUpAnswer('no')} className="btn-pill bg-surface2 text-muted-foreground px-7 py-2 text-sm hover:bg-muted">✗ No</button>
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => handleFollowUpAnswer('Yes')} disabled={isSubmittingAnswer} className="btn-pill bg-secondary/30 text-secondary-foreground px-6 py-2 text-sm hover:bg-secondary/50 disabled:opacity-50">Yes</button>
+                        <button onClick={() => handleFollowUpAnswer('No')} disabled={isSubmittingAnswer} className="btn-pill bg-surface2 text-muted-foreground px-6 py-2 text-sm hover:bg-muted disabled:opacity-50">No</button>
+                        <button onClick={() => handleFollowUpAnswer('Not sure')} disabled={isSubmittingAnswer} className="btn-pill border border-border bg-card px-4 py-2 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50">Not sure</button>
+                      </div>
+                      <form onSubmit={event => { event.preventDefault(); if (followUpInput.trim()) handleFollowUpAnswer(followUpInput.trim()); }} className="flex gap-2">
+                        <input
+                          value={followUpInput}
+                          onChange={event => setFollowUpInput(event.target.value)}
+                          placeholder="Or type a more detailed answer"
+                          aria-label="Your follow-up answer"
+                          disabled={isSubmittingAnswer}
+                          className="input-medicare min-w-0 flex-1 pl-4 py-2.5 text-sm"
+                        />
+                        <button type="submit" disabled={!followUpInput.trim() || isSubmittingAnswer} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">
+                          Answer
+                        </button>
+                      </form>
                     </div>
                   )}
                 </>
@@ -247,14 +289,18 @@ export default function ChatScreen({ onViewResults, predictionResult, setPredict
           <div className="flex items-end gap-3">
             <textarea ref={textareaRef} value={input} onChange={e => { setInput(e.target.value); autoResize(); }}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="Describe your symptoms... (e.g. I have had fever and headache for 2 days)"
+              placeholder="What symptoms are you experiencing, and when did they start?"
               rows={1} className="input-medicare pl-4 resize-none flex-1" />
             <button onClick={handleSend} disabled={!input.trim()}
               className="btn-primary p-3 disabled:opacity-50">
               <Send className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-center text-[11px] text-muted-foreground mt-2">⚠️ Not a medical diagnosis — always consult a doctor</p>
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] leading-5 text-muted-foreground">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-accent-foreground" />
+            If symptoms are severe or sudden, or include chest pain or trouble breathing, contact local emergency services.
+          </p>
+          <p className="mt-1 text-center text-[11px] text-muted-foreground">This tool is informational and is not a medical diagnosis.</p>
         </div>
       )}
     </div>

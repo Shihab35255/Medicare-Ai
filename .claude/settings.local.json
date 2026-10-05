@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"f:\\\\medicare-ai-chat-73c62a449442dda33458a16081c73f8c99b60472\" -Force | Where-Object { $_.Name -match '^\\\\.env' } | Select-Object Name)",
+      "PowerShell(Get-ChildItem \"f:\\\\medicare-ai-chat-73c62a449442dda33458a16081c73f8c99b60472\\\\backend\" -Recurse -Exclude \"node_modules\" | Where-Object { $_.FullName -notmatch \"node_modules\" } | Select-Object Name, Length | Out-String)",
+      "PowerShell(\\(Get-Content \"f:\\\\medicare-ai-chat-73c62a449442dda33458a16081c73f8c99b60472\\\\training_data.csv\" | Measure-Object -Line\\).Lines; $content = Import-Csv \"f:\\\\medicare-ai-chat-73c62a449442dda33458a16081c73f8c99b60472\\\\training_data.csv\"; $content | Select-Object disease | Sort-Object disease -Unique | Measure-Object)"
+    ]
+  }
+}

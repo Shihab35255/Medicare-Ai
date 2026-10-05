@@ -1089,15 +1089,25 @@ export default function AboutScreen({ onBack, onGetStarted }: Props) {
           {/* decorative glow */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #7C9EF5, transparent)' }} />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #C4B0F0, transparent)' }} />
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-avatar flex items-center justify-center text-white font-heading font-bold text-2xl ring-4 ring-primary/20">MT</div>
-          <h3 className="font-heading font-bold text-xl mb-1">Md. Tahmidur Rahman Nafees</h3>
+          <img
+            src="/developer-profile.jpg"
+            alt="N. Nure Azad Shihab"
+            className="w-20 h-20 mx-auto mb-4 rounded-full object-cover ring-4 ring-primary/20"
+          />
+          <h3 className="font-heading font-bold text-xl mb-1">N.Nure Azad Shihab</h3>
           <p className="text-primary font-semibold text-sm mb-1">Skilled Full-Stack Software Engineer | AI/ML Specialist | Innovative Problem Solver</p>
           <p className="text-muted-foreground text-sm mb-4">Electrical and Computer Engineering · North South University</p>
           <p className="text-sm text-muted-foreground">Developed MediCare AI as a showcase of production-grade full-stack engineering — combining dynamic ML ensemble systems, RAG validation, and local LLM inference into a unified intelligent health analysis platform.</p>
           <div className="mt-6 pt-6 border-t border-border flex flex-wrap justify-center gap-3">
-            {['GitHub', 'Email', 'Portfolio'].map(link => (
-              <span key={link} className="text-xs bg-primary-light text-primary px-3 py-1.5 rounded-full font-semibold cursor-pointer hover:bg-primary/20 transition-colors">{link}</span>
-            ))}
+            <a href="https://github.com/Shihab35255" target="_blank" rel="noreferrer"
+              className="text-xs bg-primary-light text-primary px-3 py-1.5 rounded-full font-semibold hover:bg-primary/20 transition-colors">
+              GitHub
+            </a>
+            <a href="mailto:nowshin.shihab@northsouth.edu"
+              className="text-xs bg-primary-light text-primary px-3 py-1.5 rounded-full font-semibold hover:bg-primary/20 transition-colors">
+              nowshin.shihab@northsouth.edu
+            </a>
+            <span className="text-xs bg-primary-light text-primary px-3 py-1.5 rounded-full font-semibold">Portfolio</span>
           </div>
         </div>
       </section>

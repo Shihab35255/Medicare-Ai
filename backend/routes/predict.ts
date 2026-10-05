@@ -4,6 +4,7 @@ import * as llmService from '../services/llm.service.js';
 import * as ragService from '../services/rag.service.js';
 
 const router = Router();
+const USE_LLM = process.env.DISABLE_LLM?.toLowerCase() !== 'true';
 
 // ML Service configuration
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
@@ -21,20 +22,55 @@ function normalizeSymptom(text: string): string {
  * Synonym expansion map – maps common user terms to standardized KB forms
  */
 const SYMPTOM_SYNONYMS: Record<string, string[]> = {
-  headache: ['cephalgia', 'head pain', 'head hurts', 'migraine'],
-  rash: ['skin rash', 'eruption', 'itchy rash', 'blisters'],
-  fever: ['temperature', 'hot body', 'high temperature'],
-  'runny nose': ['stuffy nose', 'blocked nose', 'nasal congestion'],
-  'sore throat': ['throat pain'],
-  cough: ['coughing'],
-  nausea: ['nauseous'],
-  vomiting: ['vomit', 'throwing up'],
-  diarrhea: ['loose stool'],
-  'abdominal pain': ['stomach pain', 'stomach ache', 'abdomen pain'],
-  'shortness of breath': ['breathing trouble', 'difficulty breathing', 'breathless'],
-  'chest pain': ['chest tightness'],
-  'body aches': ['body pain', 'muscle pain', 'muscle ache'],
-  fatigue: ['tired', 'weakness', 'weak', 'extreme fatigue'],
+  // ── General ──
+  headache: ['cephalgia', 'head pain', 'head hurts', 'migraine', 'headaches'],
+  fever: ['temperature', 'hot body', 'high temperature', 'feverish', 'high fever'],
+  fatigue: ['tired', 'weakness', 'weak', 'extreme fatigue', 'tiredness', 'exhaustion'],
+  cough: ['coughing', 'dry cough', 'wet cough', 'persistent cough'],
+  nausea: ['nauseous', 'feeling sick', 'queasy'],
+  vomiting: ['vomit', 'throwing up', 'puking'],
+  diarrhea: ['loose stool', 'loose stools', 'watery stool', 'loose bowel'],
+  'skin rash': ['rash', 'eruption', 'itchy rash', 'blisters', 'skin eruption'],
+  // ── Respiratory ──
+  'shortness of breath': ['breathing trouble', 'difficulty breathing', 'breathless', 'cant breathe', 'hard to breathe', 'laboured breathing'],
+  'nasal congestion': ['stuffy nose', 'blocked nose', 'runny nose', 'runny nose'],
+  'sore throat': ['throat pain', 'throat hurts', 'scratchy throat'],
+  wheezing: ['wheeze', 'whistling breath'],
+  // ── Chest / Cardiac ──
+  'chest tightness': ['tight chest', 'chest pressure', 'chest heaviness'],
+  'sharp chest pain': ['chest pain', 'chest hurts', 'pain in chest'],
+  'palpitations': ['heart racing', 'racing heart', 'heart pounding', 'irregular heartbeat'],
+  // ── GI ──
+  'sharp abdominal pain': ['abdominal pain', 'stomach pain', 'stomach ache', 'abdomen pain', 'tummy pain', 'belly pain'],
+  'lower abdominal pain': ['lower stomach pain', 'lower belly pain', 'pelvic discomfort'],
+  'decreased appetite': ['loss of appetite', 'poor appetite', 'no appetite', 'not hungry', 'appetite loss', 'not eating'],
+  'difficulty in swallowing': ['trouble swallowing', 'painful swallowing', 'hard to swallow', 'dysphagia'],
+  constipation: ['constipated', 'cannot poop', 'no bowel movement'],
+  'stomach bloating': ['bloating', 'bloated stomach', 'bloated belly', 'distended abdomen'],
+  // ── Urinary ──
+  'frequent urination': ['urinary frequency', 'frequent peeing', 'urge to urinate', 'urinary urgency', 'need to pee often', 'peeing a lot'],
+  'painful urination': ['burning urination', 'burning sensation urinating', 'penile burning sensation', 'burning pee', 'stinging urination', 'hurts to urinate', 'dysuria', 'pain when urinating'],
+  // ── Musculoskeletal ──
+  'joint pain': ['joint ache', 'joint hurts', 'achy joints', 'painful joints'],
+  'joint swelling': ['swollen joints', 'puffy joints', 'inflamed joints'],
+  'back pain': ['back ache', 'back hurts', 'lower back pain', 'lumbar pain'],
+  'muscle pain': ['muscle ache', 'muscle soreness', 'myalgia'],
+  'ache all over': ['body aches', 'body pain', 'aching all over', 'generalized aching', 'body aches all over'],
+  // ── Neurological ──
+  dizziness: ['dizzy', 'lightheaded', 'vertigo', 'spinning sensation'],
+  // ── Eyes ──
+  'diminished vision': ['blurred vision', 'blurry vision', 'vision problems', 'blurry eyesight', 'poor vision', 'vision changes'],
+  // ── Skin ──
+  'itching of skin': ['itching', 'itchy skin', 'skin itching', 'pruritus', 'itchiness'],
+  // ── Other ──
+  'weight gain': ['gaining weight', 'putting on weight', 'increased weight'],
+  'weight loss': ['losing weight', 'recent weight loss', 'unexplained weight loss'],
+  thirst: ['excessive thirst', 'very thirsty', 'always thirsty', 'polydipsia'],
+  insomnia: ['cant sleep', 'trouble sleeping', 'sleep problems', 'sleeplessness'],
+  'loss of taste or smell': ['cant taste', 'no sense of smell', 'lost taste', 'anosmia', 'lost smell', 'no taste'],
+  depression: ['depressed', 'feeling depressed', 'low mood', 'sad all the time'],
+  'anxiety and nervousness': ['anxiety', 'anxious', 'nervous', 'feeling anxious', 'panic'],
+  sweating: ['excessive sweating', 'night sweats', 'sweaty', 'profuse sweating'],
 };
 
 /**
@@ -77,10 +113,10 @@ function preprocessSymptoms(rawSymptoms: string[]): { symptoms: string[]; gate: 
 // ── Stage 4: Confidence Label Mapping ─────────────────────────────────────
 
 function getConfidenceLabel(score: number): { label: string; color: string } {
-  if (score >= 75) return { label: 'Likely match', color: 'green' };
-  if (score >= 50) return { label: 'Possible match', color: 'amber' };
-  if (score >= 30) return { label: 'Low confidence match', color: 'orange' };
-  return { label: 'Weak signal only', color: 'red' };
+  if (score >= 75) return { label: 'High pattern overlap', color: 'green' };
+  if (score >= 50) return { label: 'Moderate pattern overlap', color: 'amber' };
+  if (score >= 30) return { label: 'Some pattern overlap', color: 'orange' };
+  return { label: 'Limited pattern overlap', color: 'red' };
 }
 
 // ── Helper: Call ML Service ───────────────────────────────────────────────
@@ -188,26 +224,69 @@ router.post('/diagnose', authMiddleware, async (req: AuthRequest, res: Response)
       mlModelPredictions = mlResult.model_predictions;
     }
 
-    // Get top 3 diseases from ML for RAG validation
-    const top3Diseases: string[] = mlEnsemble
-      ? [mlEnsemble.disease]
-      : [];
+    // Use adjusted_ml from ML service response directly (adjusted_ml variable is declared later)
+    const earlyAdjustedMl: number = mlResult?.adjusted_ml ?? mlResult?.weighted_ml_raw ?? mlEnsemble?.confidence ?? 0;
 
-    // Also include other model predictions if they differ
-    if (mlModelPredictions) {
-      const otherDiseases = Object.values(mlModelPredictions)
-        .map((m: any) => m.disease)
-        .filter((d: string) => d !== top3Diseases[0] && !top3Diseases.includes(d));
-      top3Diseases.push(...otherDiseases.slice(0, 2));
+    // Detect whether the new group-based models are loaded (mlEnsemble.disease is a group name)
+    // vs. old individual-disease models.
+    const ALL_ML_GROUPS = new Set([
+      'respiratory', 'cardiovascular', 'neurological', 'psychiatric',
+      'gastrointestinal', 'musculoskeletal', 'skin', 'infectious',
+      'endocrine', 'renal_urinary', 'reproductive', 'hematologic',
+      'oncologic', 'ophthalmic', 'ent', 'trauma_injury',
+      'autoimmune', 'poisoning', 'nutritional', 'dental_oral',
+    ]);
+    const mlPredictsGroup = !!(mlEnsemble && ALL_ML_GROUPS.has((mlEnsemble.disease ?? '').toLowerCase()));
+    const mlGroup: string | null = (mlPredictsGroup && earlyAdjustedMl >= 30)
+      ? (mlEnsemble!.disease as string).toLowerCase()
+      : null;
+
+    // RAG search — filtered to ML group when the new group models are confident
+    let ragResults = mlGroup
+      ? ragService.searchDiseasesInGroup(processedSymptoms, mlGroup)
+      : ragService.searchDiseases(processedSymptoms);
+
+    // Fall back to full search when group filtering yields poor results —
+    // this happens when ML predicted the wrong category for these symptoms.
+    if (mlGroup) {
+      const topGroupScore = ragResults[0]?.relevance ?? 0;
+      const meaningfulHits = ragResults.filter(r => r.relevance > 0).length;
+      if (meaningfulHits < 2 || topGroupScore < 30) {
+        ragResults = ragService.searchDiseases(processedSymptoms);
+      }
     }
 
+    const topRagDiseases = ragResults.slice(0, 3).map(r => r.disease);
+
+    // Build top3Diseases for RAG validation.
+    // With group models: ML predicts a category, not a disease — fill all slots from RAG.
+    // With legacy individual-disease models: fill ML's disease first when confident.
+    const top3Diseases: string[] = [];
+
+    if (mlEnsemble && !mlPredictsGroup && earlyAdjustedMl >= 30) {
+      // Legacy individual-disease ML — add its top pick then other confident model picks
+      top3Diseases.push(mlEnsemble.disease);
+      if (mlModelPredictions) {
+        const otherDiseases = Object.values(mlModelPredictions)
+          .filter((m: any) => (m as any).confidence >= 15)
+          .map((m: any) => (m as any).disease)
+          .filter((d: string) => !top3Diseases.includes(d));
+        top3Diseases.push(...otherDiseases.slice(0, 2));
+      }
+    }
+
+    // Fill remaining slots with top RAG candidates
+    for (const ragDisease of topRagDiseases) {
+      if (!top3Diseases.includes(ragDisease)) {
+        top3Diseases.push(ragDisease);
+      }
+    }
+    top3Diseases.splice(3);
+
     // ── Stage 3: RAG Symptom Validation (top 3) ────────────────────────────
-    // Temporarily skip RAG validation to avoid hanging
-    // const ragCandidates = ragService.validateTopDiseases(processedSymptoms, top3Diseases);
-    // const ragValidation = ragCandidates.length > 0 ? ragCandidates[0] : null;
-    const ragCandidates: any[] = [];
-    const ragValidation = null;
-    const ragScore = 0;
+    const ragCandidates: any[] = top3Diseases.length > 0 ? ragService.validateTopDiseases(processedSymptoms, top3Diseases) : [];
+    const ragValidation = ragCandidates.length > 0 ? ragCandidates[0] : null;
+    const ragScore = ragValidation?.rag_score ?? 0;
 
     // ── Stage 2C & 4: Build ML breakdown with dynamic ensemble ──────────────
     let ml_breakdown: any = null;
@@ -240,121 +319,203 @@ router.post('/diagnose', authMiddleware, async (req: AuthRequest, res: Response)
       };
     }
 
-    // ── Stage 4: Adaptive Hybrid Score ─────────────────────────────────────
-    let ml_weight = 0.5;
-    let rag_weight = 0.5;
+    // ── Stage 4: Final Disease — RAG always decides ────────────────────────────
+    // RAG (precision-weighted symptom matching against a structured KB) is the
+    // only decision-maker for the final disease. ML contributes by:
+    //   • Filtering the search space to the most likely category (Stage 3)
+    //   • Adding a confidence boost when it independently agrees (Stage 4B)
+    //
+    // Threshold 40%: at 3 reported symptoms this means at least 2 matched.
+    // Lower than this and the result is too speculative to name.
+    let finalDisease: string;
+    let predictionSource: 'rag_primary' | 'fallback';
+    let explanation: string = '';
 
-    if (adjusted_ml >= 65) {
-      ml_weight = 0.75;
-      rag_weight = 0.25;
-    } else if (adjusted_ml >= 45) {
-      ml_weight = 0.65;
-      rag_weight = 0.35;
+    if (ragValidation && ragScore >= 40) {
+      finalDisease = ragValidation.disease;
+      predictionSource = 'rag_primary';
     } else {
-      ml_weight = 0.50;
-      rag_weight = 0.50;
+      finalDisease = 'Unknown Condition';
+      predictionSource = 'fallback';
     }
 
-    let final_confidence = (ml_weight * adjusted_ml) + (rag_weight * ragScore);
-    final_confidence = Math.max(0, Math.min(85, final_confidence)); // cap at 85
-    final_confidence = Math.round(final_confidence * 10) / 10;
+    // ── Stage 4B: ML Confidence Boost ─────────────────────────────────────────
+    // Group models (new): boost when ML's predicted group matches the group of
+    //   RAG's final disease — confirms we're searching the right category.
+    //   Random chance = 100/20 = 5% with 20 groups.
+    // Legacy individual-disease models: boost when ML independently agrees on the
+    //   same specific disease as RAG. Random chance = 100/773 ≈ 0.13%.
+    let mlAgreementBoost = 0;
+    let mlSignalMultiple = 0;
+    let mlAgreesWithFinal = false;
+
+    if (mlPredictsGroup && mlGroup && adjusted_ml >= 30) {
+      // Group match boost
+      const ragDiseaseGroup = ragService.getDiseaseGroup(finalDisease);
+      if (ragDiseaseGroup === mlGroup) {
+        mlAgreesWithFinal = true;
+        // Boost scales with ML group confidence (baseline random = 5%)
+        mlSignalMultiple = Math.round(adjusted_ml / (100 / 20));
+        mlAgreementBoost = adjusted_ml >= 70 ? 10
+          : adjusted_ml >= 50 ? 7
+          : 5;
+      }
+    } else if (!mlPredictsGroup) {
+      // Legacy individual-disease agreement boost
+      const RANDOM_CHANCE_PCT = 100 / 773;
+      mlAgreesWithFinal = !!(mlEnsemble &&
+        mlEnsemble.disease.toLowerCase().trim() === finalDisease.toLowerCase().trim());
+      if (mlAgreesWithFinal && adjusted_ml > 0) {
+        mlSignalMultiple = Math.round(adjusted_ml / RANDOM_CHANCE_PCT);
+        mlAgreementBoost = mlSignalMultiple >= 50 ? 15
+          : mlSignalMultiple >= 20 ? 10
+          : mlSignalMultiple >= 10 ? 6
+          : mlSignalMultiple >= 5  ? 3
+          : mlSignalMultiple >= 2  ? 1
+          : 0;
+        const allModelsAgree = mlModelPredictions && Object.values(mlModelPredictions)
+          .every((m: any) => m.disease?.toLowerCase().trim() === finalDisease.toLowerCase().trim());
+        if (allModelsAgree) mlAgreementBoost += 5;
+      }
+    }
+
+    // ── Stage 4C: Final Confidence ─────────────────────────────────────────────
+    // Base = RAG score (symptom match quality), plus ML boost when groups agree.
+    // Capped at 95% — AI tools should never claim certainty.
+    let final_confidence: number;
+    if (predictionSource === 'rag_primary') {
+      final_confidence = ragScore + mlAgreementBoost;
+    } else {
+      final_confidence = 20; // fallback: minimal signal, show as weak
+    }
+
+    final_confidence = Math.round(Math.min(95, Math.max(0, final_confidence)) * 10) / 10;
 
     const { label: confidence_label, color: confidence_color } = getConfidenceLabel(final_confidence);
 
-    // ── Determine final disease & prediction source ─────────────────────────
-    let finalDisease: string;
-    let predictionSource: 'ml_primary' | 'llm_fallback' | 'rag_primary';
-    let llmPrediction: any = null;
-    let explanation: string = '';
+    // Build a rich KB-based explanation as the baseline — used when Ollama is
+    // unavailable or times out. Always informative regardless of LLM status.
+    const kbInfo = ragService.getDiseaseInfo(finalDisease);
+    function buildKBExplanation(): string {
+      const matched = ragValidation?.matched ?? [];
+      const missing = ragValidation?.missing ?? [];
+      const description = kbInfo?.description && !kbInfo.description.startsWith('Auto-generated')
+        ? kbInfo.description
+        : null;
 
-    if (mlEnsemble && adjusted_ml >= 30) {
-      // ML primary path
-      finalDisease = mlEnsemble.disease;
-      predictionSource = 'ml_primary';
+      let text = `**Closest symptom-pattern match:** ${finalDisease}\n\n`;
 
-      // LLM timeout issue - use fallback
-      console.log('Using fallback explanation - LLM slow');
-      explanation = `**${finalDisease}** (${final_confidence}%) matches your symptoms: ${processedSymptoms.join(', ')}.
-
-ML models predicted ${mlEnsemble ? mlEnsemble.disease + ' (' + adjusted_ml.toFixed(1) + '%)' : 'no strong ML match'}.
-RAG validation score: ${ragScore.toFixed(1)}%.
-
-*Consult a doctor for proper diagnosis.*`;
-
-     } else if (ragValidation && ragScore >= 40) {
-       // RAG primary path (ML uncertain but RAG has strong match)
-       finalDisease = ragValidation.disease;
-       predictionSource = 'rag_primary';
-       final_confidence = Math.min(final_confidence, ragScore);
-
-      // LLM timeout issue - use fallback
-      console.log('Using fallback explanation - LLM slow');
-      explanation = `**${finalDisease}** (${final_confidence}%) matches your symptoms: ${processedSymptoms.join(', ')}.
-
-ML models predicted ${mlEnsemble ? mlEnsemble.disease + ' (' + adjusted_ml.toFixed(1) + '%)' : 'no strong ML match'}.
-RAG validation score: ${ragScore.toFixed(1)}%.
-
-*Consult a doctor for proper diagnosis.*`;
-
-    } else {
-      // LLM fallback - with timeout to prevent hanging
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-        
-        // Use a simple fallback instead of full LLM generation for speed
-        finalDisease = 'Unknown Condition';
-        final_confidence = 20;
-        predictionSource = 'fallback';
-        explanation = `Unable to make a confident diagnosis from the provided symptoms. Please consult a healthcare provider for proper evaluation.
-
-Symptoms reported: ${processedSymptoms.join(', ')}
-
-Common causes of these symptoms can vary widely, and professional medical evaluation is necessary.`;
-
-        console.log('Using simple fallback - LLM generation skipped for performance');
-      } catch (error) {
-        // Absolute fallback if anything goes wrong
-        finalDisease = 'Unknown Condition';
-        final_confidence = 20;
-        predictionSource = 'fallback';
-        explanation = `Unable to make a confident diagnosis. Please consult a healthcare provider.`;
-        console.error('LLM fallback error, using minimal fallback:', error);
+      if (description) {
+        text += `**About this condition:**\n${description}\n\n`;
+      } else {
+        text += `**About this condition:**\nThe system found a symptom-pattern overlap with this condition in its reference data. This does not confirm that you have it.\n\n`;
       }
+
+      text += `**Why it appeared in the results:**\nYou reported: *${processedSymptoms.join(', ')}*. `;
+
+      if (matched.length > 0) {
+        text += `The reference profile also includes **${matched.join(', ')}**. `;
+      }
+
+      if (missing.length > 0 && missing.length <= 5) {
+        text += `Other symptoms in the reference profile include ${missing.join(', ')}. You did not report these, but that does not confirm or rule out a condition.\n\n`;
+      } else {
+        text += '\n\n';
+      }
+
+      text += `**Important:** The pattern score is not a probability, diagnosis, or measure of how likely you have this condition. The result cannot assess your full medical history or replace a clinician's evaluation.\n\n`;
+
+      text += `**What to do next:**\nShare when your symptoms began, how they changed, and any existing conditions, allergies, or medicines with a qualified healthcare professional. Ask a clinician or pharmacist before starting, stopping, or changing medicines.\n\n`;
+
+      // Methodology section for faculty/transparency
+      text += `**How the system compared patterns:**\n`;
+      if (predictionSource === 'rag_primary') {
+        text += `The system's reference data produced a **${ragScore.toFixed(0)}% pattern score** for symptom overlap. This score is not calibrated as a probability. `;
+        if (mlPredictsGroup && mlGroup) {
+          if (mlAgreementBoost > 0) {
+            text += `A machine-learning model also selected the broad **${mlGroup}** category. `;
+          } else {
+            text += `A machine-learning model suggested the broad **${mlGroup}** category, but this match came from the broader symptom search. `;
+          }
+        } else if (mlAgreementBoost > 0) {
+          text += `A separate machine-learning model agreed with the broad pattern category. `;
+        }
+      } else {
+        text += `Symptom patterns did not match one condition clearly. The displayed result is a weak signal, not a diagnosis.\n\n`;
+      }
+
+      text += `⚠️ **Disclaimer:** This AI-assisted screening is informational only. It does not diagnose conditions or recommend treatment. Please consult a qualified healthcare provider for personal advice.`;
+      return text;
+    }
+
+    // Methodology context passed to the LLM for richer, more transparent explanations
+    const llmMethodCtx = {
+      predictionSource,
+      ragScore: Math.round(ragScore * 10) / 10,
+      adjusted_ml: Math.round(adjusted_ml * 10) / 10,
+      mlGroup: mlGroup ?? undefined,
+      mlAgreementBoost,
+      final_confidence,
+      confidence_label,
+    };
+
+    // Generate patient-friendly explanation with timeout safety
+    try {
+      if (predictionSource !== 'fallback') {
+        if (USE_LLM && llmService.isLLMEnabled()) {
+          const kbFallback = buildKBExplanation();
+          explanation = await Promise.race<string>([
+            llmService.generateExplanation(finalDisease, processedSymptoms, llmMethodCtx),
+            new Promise(resolve => setTimeout(() => resolve(kbFallback), 6500)),
+          ]);
+          // If Ollama returned something too short, use the richer KB explanation
+          if (explanation.trim().length < 150) {
+            explanation = kbFallback;
+          }
+        } else {
+          explanation = buildKBExplanation();
+        }
+      } else {
+        explanation = `The symptoms you reported (${processedSymptoms.join(', ')}) did not match any single condition with sufficient confidence.\n\nCommon causes of these combined symptoms can vary widely. Please consult a healthcare provider for proper evaluation.\n\n⚠️ This is an AI-assisted analysis for informational purposes only.`;
+      }
+    } catch (error) {
+      explanation = buildKBExplanation();
+      console.error('Explanation generation error:', error);
     }
 
     // ── Build all predictions list ──────────────────────────────────────────
     const allPredictions: any[] = [];
 
+    // For group-based ML: show the group prediction as context, not as a disease candidate.
+    // For legacy individual-disease ML: include it as a proper candidate if confident.
     if (mlEnsemble && adjusted_ml >= 30) {
-      allPredictions.push({
-        disease: mlEnsemble.disease,
-        confidence: Math.round(adjusted_ml * 10) / 10,
-        source: 'ml_ensemble',
-        used_in_final: mlEnsemble.disease === finalDisease,
-      });
+      if (mlPredictsGroup) {
+        allPredictions.push({
+          disease: `[ML category: ${mlEnsemble.disease}]`,
+          confidence: Math.round(adjusted_ml * 10) / 10,
+          source: 'ml_group_filter',
+          used_in_final: false,
+        });
+      } else {
+        allPredictions.push({
+          disease: mlEnsemble.disease,
+          confidence: Math.round(adjusted_ml * 10) / 10,
+          source: 'ml_ensemble',
+          used_in_final: mlEnsemble.disease === finalDisease,
+        });
+      }
     }
 
-    if (llmPrediction) {
-      allPredictions.push(...llmPrediction.allPredictions.map((p: any) => ({
-        disease: p.disease,
-        confidence: p.confidence,
-        source: 'llm_fallback',
-        used_in_final: p.disease === finalDisease,
-      })));
+    for (const cand of ragCandidates) {
+      if (cand.rag_score > 0 && !allPredictions.some(p => p.disease === cand.disease)) {
+        allPredictions.push({
+          disease: cand.disease,
+          confidence: Math.round(cand.rag_score * 10) / 10,
+          source: 'rag_validation',
+          used_in_final: cand.disease === finalDisease,
+        });
+      }
     }
-
-    // Add RAG candidates as predictions (temporarily disabled)
-    // for (const cand of ragCandidates) {
-    //   if (!allPredictions.some(p => p.disease === cand.disease)) {
-    //     allPredictions.push({
-    //       disease: cand.disease,
-    //       confidence: Math.round(cand.rag_score * 10) / 10,
-    //       source: 'rag_validation',
-    //       used_in_final: cand.disease === finalDisease,
-    //     });
-    //   }
-    // }
 
     // ── Build RAG breakdown ─────────────────────────────────────────────────
     const rag_breakdown = ragValidation
@@ -382,26 +543,32 @@ Common causes of these symptoms can vary widely, and professional medical evalua
         top_model: 'none',
       };
     }
+    // Attach ML signal info to the breakdown
+    ml_breakdown.predicts_group = mlPredictsGroup;
+    ml_breakdown.ml_group = mlGroup;
+    ml_breakdown.agrees_with_rag = mlAgreesWithFinal;
+    ml_breakdown.signal_multiple = mlSignalMultiple;
+    ml_breakdown.agreement_boost = mlAgreementBoost;
 
     // ── Build Methodology Explanation ───────────────────────────────────────
-    let methodsUsed: string[] = ['llm'];
-    let primaryMethod = 'llm';
+    // Explain system pattern scores without presenting them as probabilities.
+    const methodsUsed: string[] = ['rag'];
+    const primaryMethod = 'rag';
     let methodologyExplanation = '';
 
-    if (predictionSource === 'ml_primary') {
-      methodsUsed.push('ml', 'rag');
-      primaryMethod = 'ml';
-      methodologyExplanation = `Diagnosis generated primarily through ML ensemble analysis (${adjusted_ml.toFixed(1)}% confidence) and validated by symptom matching (${ragScore.toFixed(1)}%). Final hybrid confidence: ${final_confidence.toFixed(1)}%.`;
-    } else if (predictionSource === 'rag_primary') {
-      methodsUsed.push('rag');
-      primaryMethod = 'rag';
-      methodologyExplanation = `Diagnosis based on strong symptom-to-disease matching (${ragScore.toFixed(1)}%) when ML confidence was low. Final hybrid confidence: ${final_confidence.toFixed(1)}%.`;
+    if (predictionSource === 'rag_primary') {
+      if (mlPredictsGroup && mlGroup && mlAgreementBoost > 0) {
+        methodologyExplanation = `The symptom pattern search selected ${finalDisease} as its closest reference match (${ragScore.toFixed(1)}% pattern score). A separate model suggested the broad "${mlGroup}" category. The displayed score is not a probability or diagnosis.`;
+      } else if (mlPredictsGroup && mlGroup) {
+        methodologyExplanation = `The symptom pattern search selected ${finalDisease} as its closest reference match (${ragScore.toFixed(1)}% pattern score). A separate model suggested the "${mlGroup}" category, so the system compared against the broader reference set. The displayed score is not a probability or diagnosis.`;
+      } else if (mlAgreementBoost > 0) {
+        methodologyExplanation = `The symptom pattern search selected ${finalDisease} as its closest reference match (${ragScore.toFixed(1)}% pattern score), and a separate model agreed with the pattern. The displayed score is not a probability or diagnosis.`;
+      } else {
+        const mlStatus = mlEnsemble ? 'A separate model produced a different pattern.' : 'The separate machine-learning service was unavailable.';
+        methodologyExplanation = `The symptom pattern search selected ${finalDisease} as its closest reference match (${ragScore.toFixed(1)}% pattern score). ${mlStatus} The displayed score is not a probability or diagnosis.`;
+      }
     } else {
-      methodsUsed = ['llm', 'rag'];
-      primaryMethod = 'llm';
-      methodologyExplanation = mlEnsemble
-        ? `ML predicted "${mlEnsemble.disease}" with ${adjusted_ml.toFixed(1)}% confidence but was deprioritized. Diagnosis from LLM clinical reasoning.`
-        : `ML service unavailable. Diagnosis from LLM clinical reasoning.`;
+      methodologyExplanation = `The reported symptoms did not produce a clear match in the reference data (best pattern score: ${ragScore.toFixed(1)}%). This is not a diagnosis. Consider discussing your symptoms with a healthcare professional.`;
     }
 
     // ── Safety ───────────────────────────────────────────────────────────────
@@ -422,7 +589,6 @@ Common causes of these symptoms can vary widely, and professional medical evalua
       },
       ml_breakdown,
       rag_breakdown,
-      hybrid_weights_used: { ml_weight, rag_weight },
       safety,
       candidates: [], // ragCandidates.map(c => ({
       //   disease: c.disease,
@@ -440,13 +606,14 @@ Common causes of these symptoms can vary widely, and professional medical evalua
       prediction_source: predictionSource,
       ml_available: !!mlEnsemble,
       ml_confidence: Math.round(adjusted_ml * 10) / 10,
-      ml_disease: mlEnsemble?.disease ?? null,
-      ml_used: predictionSource === 'ml_primary',
+      ml_group: mlPredictsGroup ? mlEnsemble?.disease ?? null : null,
+      ml_disease: mlPredictsGroup ? null : (mlEnsemble?.disease ?? null),
+      ml_used: mlAgreementBoost > 0,
       symptom_match_score: ragScore,
       rag_validation: ragValidation,
-      rag_context_preview: 'RAG validation temporarily disabled', // ragCandidates.length > 0
-      //   ? `Matched ${ragCandidates.length} diseases.`
-      //   : 'No RAG matches found',
+      rag_context_preview: ragValidation
+        ? `RAG validated ${ragValidation.disease} with ${ragScore.toFixed(1)}% symptom alignment.`
+        : 'No RAG validation could be performed for the top predicted diseases.',
       methodology: {
         primary_method: primaryMethod,
         methods_used: methodsUsed,

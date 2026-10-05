@@ -131,8 +131,8 @@ curl -X POST http://localhost:5000/api/predict/extract \
 ## 🚨 Troubleshooting
 
 ### DB history/reminders not showing
-**Cause**: Backend was reading wrong file (`./dev.db` vs `./backend/dev.db`).  
-**Fixed**: `backend/lib/db.ts` now uses absolute path to `backend/dev.db`. Copy data if needed:
+**Cause**: The DB path was based on the backend's current working directory.  
+**Fixed**: `backend/lib/db.ts` now resolves `backend/dev.db` from its own location, so either startup directory uses the same database. Copy data if needed:
 ```bash
 cp dev.db backend/dev.db
 ```
@@ -168,4 +168,3 @@ npm run db:studio    # DB viewer
 
 ## 📄 License
 MIT
-

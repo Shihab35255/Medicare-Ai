@@ -46,6 +46,20 @@
     background: radial-gradient(ellipse at top right, hsl(222 100% 93% / 0.6), transparent 60%),
                 hsl(var(--background));
   }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 3px solid hsl(var(--ring) / 0.45);
+    outline-offset: 3px;
+  }
 }
 
 @layer utilities {
@@ -68,7 +82,7 @@
     background-clip: text;
   }
   .gradient-user-bubble {
-    background: linear-gradient(135deg, #7c9ef5, #c4b0f0);
+    background: linear-gradient(135deg, #546fb3, #c4b0f0);
   }
   .gradient-header-card {
     background: linear-gradient(135deg, #dce6ff, #efe9ff);
@@ -78,6 +92,53 @@
   }
   .gradient-avatar {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--purple)));
+  }
+  .landing-grid {
+    background-image:
+      linear-gradient(hsl(var(--primary) / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, hsl(var(--surface2)), hsl(var(--background)));
+    background-size: 44px 44px, 44px 44px, 100% 100%;
+  }
+  .landing-glow {
+    position: absolute;
+    z-index: -1;
+    width: 24rem;
+    height: 24rem;
+    border-radius: 9999px;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .landing-glow-one {
+    top: -12rem;
+    left: 12%;
+    background: hsl(var(--primary) / 0.14);
+  }
+  .landing-glow-two {
+    right: 4%;
+    bottom: -13rem;
+    background: hsl(var(--purple) / 0.18);
+  }
+  .hero-float {
+    animation: gentleFloat 5s ease-in-out infinite;
+  }
+  .hero-float-delayed {
+    animation: gentleFloat 5s ease-in-out 1.3s infinite;
+  }
+  @keyframes gentleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 

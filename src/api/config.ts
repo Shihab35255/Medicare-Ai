@@ -88,7 +88,7 @@ export async function saveToHistory(predictionData: any) {
       confidence: predictionData.confidence,
       symptoms: predictionData.symptoms_found || predictionData.symptoms,
       explanation: predictionData.explanation,
-      allPredictions: predictionData.allPredictions || [],
+      allPredictions: predictionData.all_predictions || predictionData.allPredictions || [],
     }),
   });
 }

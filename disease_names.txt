@@ -1,0 +1,774 @@
+﻿Abdominal Aortic Aneurysm
+Abdominal Hernia
+Abscess Of Nose
+Abscess Of The Lung
+Abscess Of The Pharynx
+Acanthosis Nigricans
+Acariasis
+Achalasia
+Acne
+Actinic Keratosis
+Acute Bronchiolitis
+Acute Bronchitis
+Acute Bronchospasm
+Acute Fatty Liver Of Pregnancy (Aflp)
+Acute Glaucoma
+Acute Kidney Injury
+Acute Otitis Media
+Acute Pancreatitis
+Acute Respiratory Distress Syndrome (Ards)
+Acute Sinusitis
+Acute Stress Reaction
+Adhesive Capsulitis Of The Shoulder
+Adjustment Reaction
+Adrenal Adenoma
+Adrenal Cancer
+Alcohol Abuse
+Alcohol Intoxication
+Alcohol Withdrawal
+Alcoholic Liver Disease
+Allergy
+Allergy To Animals
+Alopecia
+Alzheimer Disease
+Amblyopia
+Amyloidosis
+Amyotrophic Lateral Sclerosis (Als)
+Anal Fissure
+Anal Fistula
+Anemia
+Anemia Due To Chronic Kidney Disease
+Anemia Due To Malignancy
+Anemia Of Chronic Disease
+Angina
+Ankylosing Spondylitis
+Anxiety
+Aortic Valve Disease
+Aphakia
+Aphthous Ulcer
+Aplastic Anemia
+Appendicitis
+Arrhythmia
+Arthritis Of The Hip
+Ascending Cholangitis
+Asperger Syndrome
+Aspergillosis
+Asthma
+Astigmatism
+Atelectasis
+Athlete'S Foot
+Atonic Bladder
+Atrial Fibrillation
+Atrial Flutter
+Atrophic Skin Condition
+Atrophic Vaginitis
+Atrophy Of The Corpus Cavernosum
+Attention Deficit Hyperactivity Disorder (Adhd)
+Autism
+Autonomic Nervous System Disorder
+Avascular Necrosis
+Balanitis
+Bell Palsy
+Benign Kidney Cyst
+Benign Paroxysmal Positional Vertical (Bppv)
+Benign Prostatic Hyperplasia (Bph)
+Benign Vaginal Discharge (Leukorrhea)
+Bipolar Disorder
+Birth Trauma
+Bladder Cancer
+Bladder Disorder
+Bladder Obstruction
+Blepharitis
+Blepharospasm
+Bone Cancer
+Bone Disorder
+Bone Spur Of The Calcaneous
+Brachial Neuritis
+Brain Cancer
+Breast Cancer
+Breast Cyst
+Breast Infection (Mastitis)
+Broken Tooth
+Bunion
+Burn
+Bursitis
+Callus
+Carbon Monoxide Poisoning
+Carcinoid Syndrome
+Cardiac Arrest
+Cardiomyopathy
+Carpal Tunnel Syndrome
+Cat Scratch Disease
+Cataract
+Celiac Disease
+Cellulitis Or Abscess Of Mouth
+Central Atherosclerosis
+Central Retinal Artery Or Vein Occlusion
+Cerebral Edema
+Cerebral Palsy
+Cervical Cancer
+Cervical Disorder
+Cervicitis
+Chalazion
+Chickenpox
+Chlamydia
+Cholecystitis
+Choledocholithiasis
+Cholesteatoma
+Chondromalacia Of The Patella
+Chorioretinitis
+Chronic Back Pain
+Chronic Constipation
+Chronic Glaucoma
+Chronic Inflammatory Demyelinating Polyneuropathy (Cidp)
+Chronic Kidney Disease
+Chronic Knee Pain
+Chronic Obstructive Pulmonary Disease (Copd)
+Chronic Otitis Media
+Chronic Pain Disorder
+Chronic Pancreatitis
+Chronic Rheumatic Fever
+Chronic Sinusitis
+Chronic Ulcer
+Cirrhosis
+Coagulation (Bleeding) Disorder
+Cold Sore
+Colonic Polyp
+Colorectal Cancer
+Common Cold
+Complex Regional Pain Syndrome
+Concussion
+Conduct Disorder
+Conductive Hearing Loss
+Congenital Heart Defect
+Congenital Malformation Syndrome
+Conjunctivitis
+Conjunctivitis Due To Allergy
+Conjunctivitis Due To Bacteria
+Conjunctivitis Due To Virus
+Connective Tissue Disorder
+Contact Dermatitis
+Conversion Disorder
+Cornea Infection
+Corneal Abrasion
+Corneal Disorder
+Coronary Atherosclerosis
+COVID-19
+Cranial Nerve Palsy
+Crohn Disease
+Croup
+Crushing Injury
+Cryptococcosis
+Cryptorchidism
+Cushing Syndrome
+Cyst Of The Eyelid
+Cystic Fibrosis
+Cysticercosis
+Cystitis
+De Quervain Disease
+Decubitus Ulcer
+Deep Vein Thrombosis (Dvt)
+Degenerative Disc Disease
+Delirium
+Dementia
+Dengue Fever
+Dental Caries
+Depression
+Dermatitis Due To Sun Exposure
+Developmental Disability
+Deviated Nasal Septum
+Diabetes
+Diabetes Insipidus
+Diabetic Ketoacidosis
+Diabetic Kidney Disease
+Diabetic Peripheral Neuropathy
+Diabetic Retinopathy
+Diaper Rash
+Dislocation Of The Ankle
+Dislocation Of The Elbow
+Dislocation Of The Finger
+Dislocation Of The Foot
+Dislocation Of The Hip
+Dislocation Of The Knee
+Dislocation Of The Patella
+Dislocation Of The Shoulder
+Dislocation Of The Vertebra
+Dislocation Of The Wrist
+Dissociative Disorder
+Diverticulitis
+Diverticulosis
+Down Syndrome
+Drug Abuse
+Drug Abuse (Barbiturates)
+Drug Abuse (Cocaine)
+Drug Abuse (Methamphetamine)
+Drug Abuse (Opioids)
+Drug Poisoning Due To Medication
+Drug Reaction
+Drug Withdrawal
+Dry Eye Of Unknown Cause
+Dumping Syndrome
+Dyshidrosis
+Dysthymic Disorder
+Ear Drum Damage
+Ear Wax Impaction
+Eating Disorder
+Ectopic Pregnancy
+Ectropion
+Eczema
+Edward Syndrome
+Emphysema
+Empyema
+Encephalitis
+Endocarditis
+Endometrial Cancer
+Endometrial Hyperplasia
+Endometriosis
+Endophthalmitis
+Envenomation From Spider Or Animal Bite
+Ependymoma
+Epididymitis
+Epidural Hemorrhage
+Epilepsy
+Erectile Dysfunction
+Erythema Multiforme
+Esophageal Cancer
+Esophageal Varices
+Esophagitis
+Essential Tremor
+Eustachian Tube Dysfunction (Ear Disorder)
+Extrapyramidal Effect Of Drugs
+Eye Alignment Disorder
+Factitious Disorder
+Female Genitalia Infection
+Female Infertility Of Unknown Cause
+Fetal Alcohol Syndrome
+Fibroadenoma
+Fibrocystic Breast Disease
+Fibromyalgia
+Flat Feet
+Floaters
+Flu
+Fluid Overload
+Folate Deficiency
+Food Allergy
+Foreign Body In The Ear
+Foreign Body In The Eye
+Foreign Body In The Gastrointestinal Tract
+Foreign Body In The Nose
+Foreign Body In The Throat
+Foreign Body In The Vagina
+Fracture Of The Ankle
+Fracture Of The Arm
+Fracture Of The Facial Bones
+Fracture Of The Finger
+Fracture Of The Foot
+Fracture Of The Hand
+Fracture Of The Jaw
+Fracture Of The Leg
+Fracture Of The Neck
+Fracture Of The Patella
+Fracture Of The Pelvis
+Fracture Of The Rib
+Fracture Of The Shoulder
+Fracture Of The Skull
+Fracture Of The Vertebra
+Friedrich Ataxia
+Frostbite
+Fungal Infection Of The Hair
+Fungal Infection Of The Skin
+G6Pd Enzyme Deficiency
+Galactorrhea Of Unknown Cause
+Gallstone
+Ganglion Cyst
+Gas Gangrene
+Gastritis
+Gastroduodenal Ulcer
+Gastroesophageal Reflux Disease (Gerd)
+Gastrointestinal Hemorrhage
+Gastroparesis
+Genital Herpes
+Gestational Diabetes
+Glaucoma
+Glucocorticoid Deficiency
+Goiter
+Gonorrhea
+Gout
+Granuloma Inguinale
+Graves Disease
+Guillain Barre Syndrome
+Gum Disease
+Gynecomastia
+Hammer Toe
+Hashimoto Thyroiditis
+Head And Neck Cancer
+Head Injury
+Headache After Lumbar Puncture
+Heart Attack
+Heart Block
+Heart Contusion
+Heart Failure
+Heat Exhaustion
+Heat Stroke
+Hemangioma
+Hemarthrosis
+Hematoma
+Hemiplegia
+Hemochromatosis
+Hemolytic Anemia
+Hemophilia
+Hemorrhoids
+Hepatic Encephalopathy
+Hepatitis Due To A Toxin
+Herniated Disk
+Herpangina
+Hiatal Hernia
+Hidradenitis Suppurativa
+High Blood Pressure
+Hirschsprung Disease
+Hirsutism
+Histoplasmosis
+Hormone Disorder
+Hpv
+Human Immunodeficiency Virus Infection (Hiv)
+Huntington Disease
+Hydatidiform Mole
+Hydrocele Of The Testicle
+Hydrocephalus
+Hydronephrosis
+Hypercalcemia
+Hypercholesterolemia
+Hyperemesis Gravidarum
+Hypergammaglobulinemia
+Hyperhidrosis
+Hyperkalemia
+Hyperlipidemia
+Hypernatremia
+Hyperopia
+Hyperosmotic Hyperketotic State
+Hypertension Of Pregnancy
+Hypertensive Heart Disease
+Hypertrophic Obstructive Cardiomyopathy (Hocm)
+Hypocalcemia
+Hypoglycemia
+Hypokalemia
+Hyponatremia
+Hypothermia
+Hypothyroidism
+Hypovolemia
+Idiopathic Absence Of Menstruation
+Idiopathic Excessive Menstruation
+Idiopathic Infrequent Menstruation
+Idiopathic Irregular Menstrual Cycle
+Idiopathic Nonmenstrual Bleeding
+Idiopathic Painful Menstruation
+Ileus
+Impetigo
+Impulse Control Disorder
+Indigestion
+Induced Abortion
+Infection Of Open Wound
+Infectious Gastroenteritis
+Ingrown Toe Nail
+Inguinal Hernia
+Injury Of The Ankle
+Injury To Internal Organ
+Injury To The Abdomen
+Injury To The Arm
+Injury To The Face
+Injury To The Finger
+Injury To The Hand
+Injury To The Hip
+Injury To The Knee
+Injury To The Leg
+Injury To The Shoulder
+Injury To The Spinal Cord
+Injury To The Trunk
+Insect Bite
+Insulin Overdose
+Interstitial Lung Disease
+Intertrigo (Skin Condition)
+Intestinal Cancer
+Intestinal Disease
+Intestinal Malabsorption
+Intestinal Obstruction
+Intracerebral Hemorrhage
+Intracranial Abscess
+Intracranial Hemorrhage
+Intussusception
+Iridocyclitis
+Iron Deficiency Anemia
+Irritable Bowel Syndrome
+Ischemia Of The Bowel
+Ischemic Heart Disease
+Itching Of Unknown Cause
+Jaw Disorder
+Joint Effusion
+Juvenile Rheumatoid Arthritis
+Kaposi Sarcoma
+Kidney Cancer
+Kidney Disease Due To Longstanding Hypertension
+Kidney Failure
+Kidney Stone
+Knee Ligament Or Meniscus Tear
+Labyrinthitis
+Lactose Intolerance
+Laryngitis
+Lateral Epicondylitis (Tennis Elbow)
+Leukemia
+Lewy Body Dementia
+Lice
+Lichen Planus
+Lichen Simplex
+Lipoma
+Liver Cancer
+Liver Disease
+Lumbago
+Lung Cancer
+Lung Contusion
+Lyme Disease
+Lymphadenitis
+Lymphangitis
+Lymphedema
+Lymphogranuloma Venereum
+Lymphoma
+Macular Degeneration
+Magnesium Deficiency
+Malaria
+Male Genitalia Infection
+Malignant Hypertension
+Marijuana Abuse
+Mastectomy
+Mastoiditis
+Meckel Diverticulum
+Melanoma
+Meniere Disease
+Meningioma
+Meningitis
+Menopause
+Metabolic Disorder
+Metastatic Cancer
+Migraine
+Missed Abortion
+Mitral Valve Disease
+Mittelschmerz
+Molluscum Contagiosum
+Mononeuritis
+Mononucleosis
+Moyamoya Disease
+Mucositis
+Multiple Myeloma
+Multiple Sclerosis
+Mumps
+Muscle Spasm
+Muscular Dystrophy
+Myasthenia Gravis
+Myelodysplastic Syndrome
+Myocarditis
+Myoclonus
+Myopia
+Myositis
+Narcolepsy
+Nasal Polyp
+Necrotizing Fasciitis
+Neonatal Jaundice
+Nerve Impingement Near The Shoulder
+Neuralgia
+Neurofibromatosis
+Neuropathy Due To Drugs
+Neurosis
+Nonalcoholic Liver Disease (Nash)
+Noninfectious Gastroenteritis
+Normal Pressure Hydrocephalus
+Nose Disorder
+Obesity
+Obsessive Compulsive Disorder (Ocd)
+Obstructive Sleep Apnea (Osa)
+Omphalitis
+Onychomycosis
+Open Wound Due To Trauma
+Open Wound From Surgical Incision
+Open Wound Of The Abdomen
+Open Wound Of The Arm
+Open Wound Of The Back
+Open Wound Of The Cheek
+Open Wound Of The Chest
+Open Wound Of The Ear
+Open Wound Of The Eye
+Open Wound Of The Face
+Open Wound Of The Finger
+Open Wound Of The Foot
+Open Wound Of The Hand
+Open Wound Of The Head
+Open Wound Of The Jaw
+Open Wound Of The Knee
+Open Wound Of The Lip
+Open Wound Of The Mouth
+Open Wound Of The Neck
+Open Wound Of The Nose
+Open Wound Of The Shoulder
+Oppositional Disorder
+Optic Neuritis
+Oral Leukoplakia
+Oral Mucosal Lesion
+Oral Thrush (Yeast Infection)
+Orbital Cellulitis
+Orthostatic Hypotension
+Osteoarthritis
+Osteochondroma
+Osteochondrosis
+Osteomyelitis
+Osteoporosis
+Otitis Externa (Swimmer'S Ear)
+Otitis Media
+Otosclerosis
+Ovarian Cancer
+Ovarian Cyst
+Ovarian Torsion
+Overflow Incontinence
+Pain After An Operation
+Pain Disorder Affecting The Neck
+Pancreatic Cancer
+Panic Attack
+Panic Disorder
+Parasitic Disease
+Parathyroid Adenoma
+Parkinson Disease
+Paronychia
+Paroxysmal Supraventricular Tachycardia
+Paroxysmal Ventricular Tachycardia
+Pelvic Fistula
+Pelvic Inflammatory Disease
+Pelvic Organ Prolapse
+Pemphigus
+Pericarditis
+Peripheral Arterial Disease
+Peripheral Arterial Embolism
+Peripheral Nerve Disorder
+Perirectal Infection
+Peritonitis
+Peritonsillar Abscess
+Persistent Vomiting Of Unknown Cause
+Personality Disorder
+Peyronie Disease
+Pharyngitis
+Phimosis
+Pilonidal Cyst
+Pinguecula
+Pinworm Infection
+Pituitary Adenoma
+Pituitary Disorder
+Pityriasis Rosea
+Placenta Previa
+Placental Abruption
+Plantar Fasciitis
+Pleural Effusion
+Pneumoconiosis
+Pneumonia
+Pneumothorax
+Poisoning Due To Analgesics
+Poisoning Due To Anticonvulsants
+Poisoning Due To Antidepressants
+Poisoning Due To Antihypertensives
+Poisoning Due To Antimicrobial Drugs
+Poisoning Due To Antipsychotics
+Poisoning Due To Ethylene Glycol
+Poisoning Due To Gas
+Poisoning Due To Opioids
+Poisoning Due To Sedatives
+Polycystic Kidney Disease
+Polycystic Ovarian Syndrome (Pcos)
+Polycythemia Vera
+Polymyalgia Rheumatica
+Postoperative Infection
+Postpartum Depression
+Post-Traumatic Stress Disorder (Ptsd)
+Preeclampsia
+Pregnancy
+Premature Atrial Contractions (Pacs)
+Premature Ovarian Failure
+Premature Rupture Of Amniotic Membrane
+Premature Ventricular Contractions (Pvcs)
+Premenstrual Tension Syndrome
+Presbyacusis
+Presbyopia
+Priapism
+Primary Immunodeficiency
+Primary Insomnia
+Primary Kidney Disease
+Primary Thrombocythemia
+Problem During Pregnancy
+Prostate Cancer
+Prostatitis
+Protein Deficiency
+Pseudohypoparathyroidism
+Pseudotumor Cerebri
+Psoriasis
+Psychosexual Disorder
+Psychotic Disorder
+Pterygium
+Pulmonary Congestion
+Pulmonary Embolism
+Pulmonary Eosinophilia
+Pulmonary Fibrosis
+Pulmonary Hypertension
+Pulmonic Valve Disease
+Pyelonephritis
+Pyloric Stenosis
+Pyogenic Skin Infection
+Raynaud Disease
+Reactive Arthritis
+Rectal Disorder
+Restless Leg Syndrome
+Retinal Detachment
+Retinopathy Due To High Blood Pressure
+Rhabdomyolysis
+Rheumatic Fever
+Rheumatoid Arthritis
+Rocky Mountain Spotted Fever
+Rosacea
+Rotator Cuff Injury
+Salivary Gland Disorder
+Sarcoidosis
+Scabies
+Scar
+Scarlet Fever
+Schizophrenia
+Sciatica
+Scleritis
+Scleroderma
+Scoliosis
+Scurvy
+Seasonal Allergies (Hay Fever)
+Sebaceous Cyst
+Seborrheic Dermatitis
+Seborrheic Keratosis
+Sensorineural Hearing Loss
+Sepsis
+Septic Arthritis
+Shingles (Herpes Zoster)
+Sialoadenitis
+Sick Sinus Syndrome
+Sickle Cell Anemia
+Sickle Cell Crisis
+Sinus Bradycardia
+Sjogren Syndrome
+Skin Cancer
+Skin Disorder
+Skin Pigmentation Disorder
+Skin Polyp
+Smoking Or Tobacco Addiction
+Social Phobia
+Soft Tissue Sarcoma
+Somatization Disorder
+Spermatocele
+Spherocytosis
+Spina Bifida
+Spinal Stenosis
+Spinocerebellar Ataxia
+Spondylitis
+Spondylolisthesis
+Spondylosis
+Spontaneous Abortion
+Sporotrichosis
+Sprain Or Strain
+Stenosis Of The Tear Duct
+Stomach Cancer
+Strep Throat
+Stress Incontinence
+Stricture Of The Esophagus
+Stroke
+Stye
+Subacute Thyroiditis
+Subarachnoid Hemorrhage
+Subconjunctival Hemorrhage
+Subdural Hemorrhage
+Substance-Related Mental Disorder
+Syndrome Of Inappropriate Secretion Of Adh (Siadh)
+Syphilis
+Syringomyelia
+Systemic Lupus Erythematosis (Sle)
+Teething Syndrome
+Temporary Or Benign Blood In Urine
+Temporomandibular Joint Disorder
+Tendinitis
+Tension Headache
+Testicular Cancer
+Testicular Disorder
+Testicular Torsion
+Thalassemia
+Thoracic Aortic Aneurysm
+Thoracic Outlet Syndrome
+Threatened Pregnancy
+Thrombocytopenia
+Thrombophlebitis
+Thyroid Cancer
+Thyroid Disease
+Thyroid Nodule
+Tic (Movement) Disorder
+Tietze Syndrome
+Tinnitus Of Unknown Cause
+Tonsillar Hypertrophy
+Tonsillitis
+Tooth Abscess
+Tooth Disorder
+Torticollis
+Tourette Syndrome
+Toxic Multinodular Goiter
+Toxoplasmosis
+Tracheitis
+Transient Ischemic Attack
+Trichiasis
+Trichinosis
+Trichomonas Infection
+Tricuspid Valve Disease
+Trigeminal Neuralgia
+Trigger Finger (Finger Disorder)
+Tuberculosis
+Tuberous Sclerosis
+Turner Syndrome
+Typhoid Fever
+Ulcerative Colitis
+Urethral Disorder
+Urethral Stricture
+Urethral Valves
+Urethritis
+Urge Incontinence
+Urinary Tract Infection
+Urinary Tract Obstruction
+Uterine Atony
+Uterine Cancer
+Uterine Fibroids
+Uveitis
+Vacterl Syndrome
+Vaginal Cyst
+Vaginal Yeast Infection
+Vaginismus
+Vaginitis
+Valley Fever
+Varicocele Of The Testicles
+Varicose Veins
+Vasculitis
+Venous Insufficiency
+Vertebrobasilar Insufficiency
+Vesicoureteral Reflux
+Viral Exanthem
+Viral Hepatitis
+Viral Warts
+Vitamin A Deficiency
+Vitamin B12 Deficiency
+Vitamin D Deficiency
+Vitreous Degeneration
+Vitreous Hemorrhage
+Vocal Cord Polyp
+Volvulus
+Von Willebrand Disease
+Vulvar Cancer
+Vulvar Disorder
+Vulvodynia
+Wernicke Korsakoff Syndrome
+White Blood Cell Disease
+Whooping Cough
+Wilson Disease
+Yeast Infection
+Zenker Diverticulum

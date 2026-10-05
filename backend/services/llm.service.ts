@@ -8,6 +8,10 @@ const runtimeProcess = globalThis as typeof globalThis & {
 
 const OLLAMA_HOST = runtimeProcess.process?.env?.OLLAMA_HOST || 'http://localhost:11434';
 const OLLAMA_MODEL = runtimeProcess.process?.env?.OLLAMA_MODEL || 'llama3.2:latest';
+const LLM_DISABLED = typeof runtimeProcess.process?.env?.DISABLE_LLM === 'string'
+  ? runtimeProcess.process?.env.DISABLE_LLM.toLowerCase() === 'true'
+  : false;
+let ollamaAvailable = !LLM_DISABLED;
 
 interface OllamaResponse {
   model: string;
@@ -103,6 +107,10 @@ function generateFallbackFollowUpQuestions(symptoms: string[]): string[] {
 }
 
 async function callOllama(prompt: string, systemPrompt?: string, timeoutMs = 100000): Promise<string> {
+  if (LLM_DISABLED || !ollamaAvailable) {
+    throw new Error('LLM is disabled or unavailable');
+  }
+
   try {
     const body: Record<string, string | boolean> = {
       model: OLLAMA_MODEL,
@@ -126,7 +134,17 @@ async function callOllama(prompt: string, systemPrompt?: string, timeoutMs = 100
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Ollama error: ${response.status}`);
+      const responseText = await response.text().catch(() => '');
+      const isMemoryError = responseText.includes('requires more system memory')
+        || responseText.includes('unable to allocate')
+        || responseText.includes('out of memory')
+        || responseText.includes('process has terminated')
+        || responseText.includes('panic:');
+      if (isMemoryError) {
+        ollamaAvailable = false;
+        throw new Error('Ollama model unavailable due to system memory constraints');
+      }
+      throw new Error(`Ollama error: ${response.status} ${responseText}`);
     }
 
     const data: OllamaResponse = await response.json();
@@ -137,11 +155,20 @@ async function callOllama(prompt: string, systemPrompt?: string, timeoutMs = 100
       throw new Error(`Ollama request timed out after ${timeoutMs}ms`);
     }
     console.error('Ollama call failed:', error);
+    const msg = typeof error.message === 'string' ? error.message : '';
+    if (msg.includes('memory') || msg.includes('unable to allocate') || msg.includes('terminated') || msg.includes('panic')) {
+      ollamaAvailable = false;
+    }
     throw error;
   }
 }
 
 export async function extractSymptoms(userInput: string): Promise<SymptomExtractionResult> {
+  if (LLM_DISABLED || !ollamaAvailable) {
+    console.warn('LLM unavailable: using local symptom extraction fallback');
+    return extractSymptomsLocally(userInput);
+  }
+
   const systemPrompt = `You are a medical symptom extractor. Analyze the user's description and extract all symptoms mentioned. Return a JSON array of symptoms found. Be specific and use medical terms where appropriate.
 
 Examples:
@@ -171,11 +198,19 @@ Return ONLY a JSON array of symptom strings, no other text.`;
     }
   } catch (error) {
     console.warn('Falling back to local symptom extraction:', error);
+    if (typeof error === 'object' && error && 'message' in error && String(error.message).includes('LLM is disabled')) {
+      ollamaAvailable = false;
+    }
     return extractSymptomsLocally(userInput);
   }
 }
 
 export async function generateFollowUpQuestions(symptoms: string[], context?: string): Promise<string[]> {
+  if (LLM_DISABLED || !ollamaAvailable) {
+    console.warn('LLM unavailable: using local follow-up question fallback');
+    return generateFallbackFollowUpQuestions(symptoms);
+  }
+
   const symptomsList = symptoms.join(', ');
   
   const systemPrompt = `You are a doctor asking YES/NO follow-up questions to understand a patient's condition. Generate 3-5 TARGETED YES/NO questions ONLY.
@@ -209,6 +244,9 @@ Return ONLY valid JSON array ["question1", "question2"], NO OTHER TEXT. Examples
     }
   } catch (error) {
     console.warn('Falling back to local follow-up questions:', error);
+    if (typeof error === 'object' && error && 'message' in error && String(error.message).includes('LLM is disabled')) {
+      ollamaAvailable = false;
+    }
     return generateFallbackFollowUpQuestions(symptoms);
   }
 }
@@ -265,6 +303,9 @@ Return ONLY valid JSON, no other text.`;
     }
   } catch (error) {
     console.error('Prediction generation error:', error);
+    if (typeof error === 'object' && error && 'message' in error && String(error.message).includes('LLM is disabled')) {
+      ollamaAvailable = false;
+    }
     return {
       disease: 'Unable to determine',
       confidence: 0,
@@ -274,38 +315,75 @@ Return ONLY valid JSON, no other text.`;
   }
 }
 
-function generateFallbackExplanation(disease: string, symptoms: string[]): string {
-  return `Based on the symptoms you reported (${symptoms.join(', ')}), "${disease}" has been identified as a possible condition.\n\n` +
-    `What this means:\n` +
-    `"${disease}" is a medical condition that can present with the symptoms you described. ` +
-    `The analysis matched your symptom pattern against known disease profiles.\n\n` +
-    `Important next steps:\n` +
-    `• Consult a qualified healthcare provider for a proper diagnosis and treatment plan.\n` +
-    `• Monitor your symptoms and seek emergency care if they worsen.\n` +
-    `• Do not self-medicate based on this AI prediction alone.\n\n` +
-    `Disclaimer: This information is generated for educational purposes only and does not replace professional medical advice.`;
+export function generateFallbackExplanation(disease: string, symptoms: string[]): string {
+  return `Why this appeared:\nThe symptoms you reported (${symptoms.join(', ')}) overlap with a reference pattern for "${disease}". This does not confirm that you have this condition.\n\n` +
+    `What the score means:\nIt is a software pattern-matching score, not a probability, diagnosis, or measure of how likely you have this condition.\n\n` +
+    `What to discuss with a professional:\nShare when your symptoms began, how they changed, your medical history, allergies, and current medicines with a qualified healthcare professional. Ask a clinician or pharmacist before starting, stopping, or changing medicines.\n\n` +
+    `This AI-assisted screening is informational only and does not diagnose conditions or recommend treatment.`;
+}
+
+interface ExplanationMethodContext {
+  predictionSource?: string;
+  ragScore?: number;
+  adjusted_ml?: number;
+  mlGroup?: string;
+  mlAgreementBoost?: number;
+  final_confidence?: number;
+  confidence_label?: string;
 }
 
 export async function generateExplanation(
   disease: string,
-  symptoms: string[]
+  symptoms: string[],
+  methodCtx?: ExplanationMethodContext
 ): Promise<string> {
-  const systemPrompt = `You are a medical explainer. Provide a clear, patient-friendly explanation of the diagnosis.
+  if (LLM_DISABLED || !ollamaAvailable) {
+    console.warn('LLM unavailable: using local explanation fallback');
+    return generateFallbackExplanation(disease, symptoms);
+  }
 
-Rules:
-- Use simple language
-- Explain what the condition means
-- Mention possible causes
-- Keep it concise (2-3 paragraphs max)
-- Include a disclaimer that this is not medical advice
+  // Build methodology summary for the LLM to include in its explanation
+  let methodSummary = '';
+  if (methodCtx) {
+    const source = methodCtx.predictionSource ?? 'rag_primary';
+    const rag = methodCtx.ragScore != null ? `${methodCtx.ragScore.toFixed(0)}% pattern score` : 'N/A';
+    const conf = methodCtx.final_confidence != null ? `${methodCtx.final_confidence.toFixed(0)}% system score` : 'N/A';
+    if (source === 'rag_primary') {
+      methodSummary = `Symptom pattern matching (RAG): ${rag}. This score is not a probability. `;
+      if (methodCtx.mlGroup) {
+        methodSummary += `A separate model selected the broad "${methodCtx.mlGroup}" category. `;
+      } else if (methodCtx.adjusted_ml && methodCtx.mlAgreementBoost) {
+        methodSummary += 'A separate model agreed with the broad pattern. ';
+      }
+      methodSummary += `Final system score: ${conf}.`;
+    } else if (source === 'ml_primary') {
+      methodSummary = `ML ensemble score: ${(methodCtx.adjusted_ml ?? 0).toFixed(0)}%. RAG pattern score: ${rag}. Final system score: ${conf}.`;
+    }
+  }
 
-Do not use technical jargon without explanation.`;
+  const systemPrompt = `You are a careful health-information explainer. You are not a clinician. This application produces a symptom-pattern comparison, not a diagnosis or a calibrated probability.
+
+Structure your response with these exact sections using markdown **bold** for section headings:
+
+**Why this appeared**
+In 1-2 short sentences, say that the listed symptoms overlap with a reference pattern associated with "${disease}". Do not say the patient has or likely has this condition.
+
+**What this score means**
+Explain that the software score reflects pattern matching only; it is not a probability, diagnosis, or measure of likelihood. Use the methodology summary.
+
+**What to discuss with a professional**
+Suggest sharing symptom onset, changes, medical history, allergies, and current medicines with a qualified healthcare professional.
+
+Keep the response concise, plain-language, and based only on supplied information. Do not invent patient history, provide a differential diagnosis, give emergency triage, or recommend, prescribe, start, stop, or change any treatment or medication.`;
+
+  const userPrompt = `Reported symptoms: ${symptoms.join(', ')}.
+Software's closest symptom-pattern match: "${disease}".
+Methodology summary: ${methodSummary || 'symptom pattern matching analysis.'}
+
+Write a patient-friendly explanation following your instructions.`;
 
   try {
-    const result = await callOllama(
-      `Explain what "${disease}" means for a patient with symptoms: ${symptoms.join(', ')}`,
-      systemPrompt
-    );
+    const result = await callOllama(userPrompt, systemPrompt);
     if (result && result.trim().length > 0) {
       return result.trim();
     }
@@ -313,15 +391,30 @@ Do not use technical jargon without explanation.`;
     return generateFallbackExplanation(disease, symptoms);
   } catch (error) {
     console.error('Ollama explanation failed, using fallback:', error);
+    if (typeof error === 'object' && error && 'message' in error && String(error.message).includes('LLM is disabled')) {
+      ollamaAvailable = false;
+    }
     return generateFallbackExplanation(disease, symptoms);
   }
 }
 
 export async function healthCheck(): Promise<boolean> {
-  try {
-    const response = await fetch(`${OLLAMA_HOST}/api/tags`);
-    return response.ok;
-  } catch {
+  if (LLM_DISABLED || !ollamaAvailable) {
     return false;
   }
+
+  try {
+    const response = await fetch(`${OLLAMA_HOST}/api/tags`);
+    if (!response.ok) {
+      ollamaAvailable = false;
+    }
+    return response.ok;
+  } catch {
+    ollamaAvailable = false;
+    return false;
+  }
+}
+
+export function isLLMEnabled(): boolean {
+  return !LLM_DISABLED && ollamaAvailable;
 }

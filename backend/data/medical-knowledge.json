@@ -17706,5 +17706,36 @@
       "headache",
       "facial pain"
     ]
+  },
+  {
+    "disease": "COVID-19",
+    "symptoms": [
+      "fever",
+      "headache",
+      "runny nose",
+      "fatigue",
+      "shortness of breath",
+      "cough",
+      "loss of taste or smell",
+      "sore throat",
+      "body aches",
+      "chills"
+    ],
+    "description": "COVID-19 is a respiratory illness caused by the SARS-CoV-2 virus. Symptoms can range from mild to severe.",
+    "treatments": [
+      "Rest, hydration, over-the-counter medications for symptoms. Seek medical attention if symptoms worsen."
+    ],
+    "severity": "high",
+    "red_flag_symptoms": [
+      "difficulty breathing",
+      "persistent chest pain",
+      "confusion",
+      "bluish lips or face"
+    ],
+    "core_symptoms": [
+      "fever",
+      "cough",
+      "fatigue"
+    ]
   }
 ]

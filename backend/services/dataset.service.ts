@@ -53,29 +53,33 @@ export interface DiabetesProfile extends DatasetProfile {
 
 /* ─────────────────────── Helpers ─────────────────────── */
 
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (const char of line) {
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
 function parseCSV(filePath: string): { headers: string[]; rows: string[][] } {
   const raw = fs.readFileSync(filePath, 'utf-8');
   const lines = raw.split(/\r?\n/).filter(l => l.trim() !== '');
   if (lines.length === 0) return { headers: [], rows: [] };
 
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, ''));
-  const rows = lines.slice(1).map(line => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (const char of line) {
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  }).filter(r => r.length === headers.length && r.some(c => c !== ''));
+  const headers = parseCSVLine(lines[0]).map(h => h.replace(/^\uFEFF/, ''));
+  const rows = lines.slice(1)
+    .map(parseCSVLine)
+    .filter(r => r.length === headers.length && r.some(c => c !== ''));
 
   return { headers, rows };
 }

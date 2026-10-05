@@ -182,49 +182,54 @@ function findDiseaseInKB(diseaseName: string): Disease | undefined {
   const diseases = medicalKnowledge as Disease[];
   const normalizedTarget = normalizeText(diseaseName);
 
-  // Try exact or substring match first
-  const exactMatch = diseases.find(
-    d => normalizeText(d.disease) === normalizedTarget ||
-         normalizeText(d.disease).includes(normalizedTarget) ||
-         normalizedTarget.includes(normalizeText(d.disease))
-  );
-  if (exactMatch) return exactMatch;
+  // Pass 1: exact match only — prevents "cystitis" → "cholecystitis" substring collision
+  const exact = diseases.find(d => normalizeText(d.disease) === normalizedTarget);
+  if (exact) return exact;
 
-  // Try aliases
-  const aliases = DISEASE_ALIASES[diseaseName];
+  // Pass 2: aliases (exact match against alias names)
+  const aliasKey = diseaseName.toLowerCase();
+  const aliases = DISEASE_ALIASES[aliasKey] ?? DISEASE_ALIASES[diseaseName];
   if (aliases) {
     for (const alias of aliases) {
       const normalizedAlias = normalizeText(alias);
-      const aliasMatch = diseases.find(
-        d => normalizeText(d.disease) === normalizedAlias ||
-             normalizeText(d.disease).includes(normalizedAlias) ||
-             normalizedAlias.includes(normalizeText(d.disease))
-      );
+      const aliasMatch = diseases.find(d => normalizeText(d.disease) === normalizedAlias);
       if (aliasMatch) return aliasMatch;
     }
+  }
+
+  // Pass 3: query-contains-disease partial match (safe direction)
+  // e.g. query "flu" finds "Flu" even without exact casing; never matches disease names
+  // that are LONGER than the query (no "cystitis" → "cholecystitis" false matches)
+  if (normalizedTarget.length >= 4) {
+    const partial = diseases.find(d => {
+      const norm = normalizeText(d.disease);
+      return norm !== normalizedTarget && normalizedTarget.includes(norm) && norm.length >= 4;
+    });
+    if (partial) return partial;
   }
 
   return undefined;
 }
 
 function calculateSimilarity(symptoms: string[], diseaseSymptoms: string[]): number {
+  if (symptoms.length === 0 || diseaseSymptoms.length === 0) return 0;
+
   const normalizedInput = symptoms.map(normalizeText);
   const normalizedDb = diseaseSymptoms.map(normalizeText);
-  
+
   let matchCount = 0;
-  
   for (const inputSymptom of normalizedInput) {
-    for (const dbSymptom of normalizedDb) {
-      // Fuzzy match: Jaro-Winkler > 0.7 (~70% similar)
-      if (jaroWinklerSimilarity(inputSymptom, dbSymptom) > 0.7) {
-        matchCount++;
-        break;
-      }
+    if (normalizedDb.some(dbSymptom => dbSymptom.includes(inputSymptom) || inputSymptom.includes(dbSymptom))) {
+      matchCount++;
     }
   }
-  
-  if (normalizedDb.length === 0) return 0;
-  return (matchCount / normalizedDb.length) * 100;
+
+  // Precision: how many of the user's symptoms does this disease explain?
+  // Recall: how much of the disease profile is covered by user's symptoms?
+  // Weight precision 70% — user's symptoms are the primary signal.
+  const precision = matchCount / symptoms.length;
+  const recall = matchCount / diseaseSymptoms.length;
+  return (0.7 * precision + 0.3 * recall) * 100;
 }
 
 export function searchDiseases(symptoms: string[]): SearchResult[] {
@@ -320,8 +325,9 @@ export function validateSymptomMatches(
 
   const matchedSymptoms: string[] = [];
   const missingSymptoms: string[] = [];
-  let weightedMatch = 0;
-  let weightedTotal = 0;
+  let weightedMatch = 0;   // sum of weights for matched disease symptoms (recall side)
+  let weightedTotal = 0;   // sum of all disease symptom weights
+  let inputMatched = 0;    // count of user's symptoms that were matched (precision side)
 
   for (let i = 0; i < disease.symptoms.length; i += 1) {
     const dbSymptom = disease.symptoms[i];
@@ -333,7 +339,7 @@ export function validateSymptomMatches(
     weightedTotal += weight;
 
     const matched = normalizedInput.some(inputSymptom =>
-      jaroWinklerSimilarity(inputSymptom, normalizedDbSymptom) > 0.7
+      normalizedDbSymptom.includes(inputSymptom) || inputSymptom.includes(normalizedDbSymptom)
     );
 
     if (matched) {
@@ -344,7 +350,17 @@ export function validateSymptomMatches(
     }
   }
 
-  let ragScore = weightedTotal === 0 ? 0 : (weightedMatch / weightedTotal) * 100;
+  // Also count how many of the user's input symptoms were explained by this disease
+  for (const inputSymptom of normalizedInput) {
+    if (normalizedDiseaseSymptoms.some(ds => ds.includes(inputSymptom) || inputSymptom.includes(ds))) {
+      inputMatched++;
+    }
+  }
+
+  const recallScore = weightedTotal === 0 ? 0 : weightedMatch / weightedTotal;
+  const precisionScore = normalizedInput.length === 0 ? 0 : inputMatched / normalizedInput.length;
+  // Weight precision 70%: "how much of what the user reported does this disease explain?"
+  let ragScore = (0.7 * precisionScore + 0.3 * recallScore) * 100;
 
   // Red flag checks
   const redFlagsPresent: string[] = [];
@@ -359,12 +375,8 @@ export function validateSymptomMatches(
     }
   }
 
-  // Apply penalty: if any red flag symptom is missing, reduce score
-  if (redFlagsMissing.length > 0) {
-    ragScore *= 0.85;
-  }
-
-  // Apply reward: if all red flags are present, boost score (capped at 100)
+  // Boost score only when red flags ARE present (confirms severe case).
+  // Missing red flags just means a mild presentation — no penalty.
   if (redFlagsPresent.length > 0 && redFlagsMissing.length === 0) {
     ragScore = Math.min(100, ragScore * 1.15);
   }
@@ -407,6 +419,360 @@ export function validateTopDiseases(
       };
     })
     .sort((a, b) => b.rag_score - a.rag_score);
+}
+
+// ── Disease Group Classification ─────────────────────────────────────────────
+// Mirrors GROUP_KEYWORD_RULES and DISEASE_GROUP_OVERRIDES from train_models.py
+// so the backend can map any KB disease to its 20-group category.
+
+const GROUP_KEYWORD_RULES_TS: Array<[string, string[]]> = [
+  ['respiratory',     ['lung', 'bronch', 'pulmon', 'pneum', 'asthma', 'copd',
+                       'emphys', 'pleural', 'trachei', 'ards', 'whooping',
+                       'tuberculosis', 'covid', 'respiratory']],
+  ['cardiovascular',  ['heart', 'cardiac', 'cardio', 'coronar', 'atrial',
+                       'ventricular', 'arrhythmia', 'angina', 'aortic', 'aorta',
+                       'arterial', 'myocarditis', 'endocarditis', 'pericarditis',
+                       'thrombophlebitis', 'atherosclerosis']],
+  ['neurological',    ['brain', 'cerebr', 'neural', 'neuro', 'epilep', 'migraine',
+                       'stroke', 'meningit', 'encephalit', 'parkinson', 'alzheimer',
+                       'dementia', 'sclerosis', 'palsy', 'seizure', 'headache',
+                       'intracranial', 'subarachnoid', 'subdural', 'epidural',
+                       'hydrocephalus', 'ataxia', 'narcolepsy', 'myasthenia',
+                       'guillain', 'neuralgia', 'neuropath', 'mononeuritis']],
+  ['psychiatric',     ['depress', 'anxiety', 'bipolar', 'schizo', 'psychot',
+                       'panic', 'ptsd', 'ocd', 'phobia', 'personality disorder',
+                       'dissociati', 'somatiz', 'factitious', 'dysthymic',
+                       'drug abuse', 'drug withdrawal', 'alcohol abuse',
+                       'alcohol intox', 'alcohol withdrawal', 'marijuana',
+                       'substance', 'eating disorder', 'adhd', 'autism',
+                       'asperger', 'conduct disorder', 'oppositional',
+                       'impulse control', 'adjustment reaction', 'acute stress',
+                       'postpartum depression', 'neurosis']],
+  ['gastrointestinal', ['gastro', 'intestin', 'bowel', 'colon', 'rectal',
+                        'liver', 'hepat', 'pancrea', 'esophag', 'stomach',
+                        'append', 'diverticul', 'hernia', 'peritonit',
+                        'cholecyst', 'choledoch', 'gallstone', 'cirrhosis',
+                        'volvulus', 'ileus', 'indigestion', 'hemorrhoid',
+                        'anal fiss', 'anal fistul', 'perirectal']],
+  ['musculoskeletal', ['bone', 'joint', 'muscl', 'tendin', 'ligament',
+                       'fracture', 'dislocation', 'arthrit', 'spondyl',
+                       'osteo', 'bursit', 'lumbago', 'sciatica', 'disc',
+                       'spinal stenosis', 'scoliosis', 'fibromyalg',
+                       'carpal tunnel', 'epicondyl', 'rotator', 'plantar',
+                       'sprain', 'strain', 'torticoll', 'gout', 'myosit']],
+  ['skin',            ['skin', 'dermat', 'acne', 'eczema', 'psoriasis',
+                       'rosacea', 'melanoma', 'alopecia', 'fungal infection',
+                       'impetigo', 'cellulitis', 'scabies', 'lice',
+                       'chickenpox', 'shingles', 'herpes zoster', 'wart',
+                       'molluscum', 'pemphigus', 'lichen', 'seborrheic',
+                       'vitiligo', 'pityriasis', 'onychomycosis', 'athlete']],
+  ['infectious',      ['sepsis', 'malaria', 'typhoid', 'dengue', 'lyme',
+                       'rocky mountain', 'mononucleosis', 'mumps', 'scarlet',
+                       'toxoplasmos', 'histoplasmos', 'cryptococcosis',
+                       'aspergillosis', 'cysticercosis', 'trichinosis',
+                       'parasitic', 'pinworm', 'sporotrichosis', 'syphilis',
+                       'gonorrhea', 'chlamydia', 'trichomonas', 'granuloma',
+                       'lymphogranuloma', 'hiv', 'cat scratch', 'valley fever']],
+  ['endocrine',       ['diabet', 'thyroid', 'insulin', 'hypoglycemi',
+                       'hyperglycemi', 'adrenal', 'pituitary', 'parathyroid',
+                       'graves', 'hashimoto', 'goiter', 'cushing',
+                       'hypercalcemia', 'hypocalcemia', 'hyponatremia',
+                       'hypernatremia', 'hypokalemia', 'hyperkalemia',
+                       'hyperlipidemia', 'metabolic disorder', 'hormone disorder',
+                       'hyperosmotic', 'siadh', 'glucocorticoid']],
+  ['renal_urinary',   ['kidney', 'renal', 'urinar', 'bladder', 'urethral',
+                       'cystitis', 'pyelonephrit', 'hydronephrosis',
+                       'nephrosis', 'ureterl', 'urethritis', 'incontinence',
+                       'vesicoureteral']],
+  ['reproductive',    ['pregnan', 'obstetric', 'uterine', 'ovarian', 'cervical',
+                       'endometri', 'menstrual', 'menopause', 'vaginal',
+                       'vulvar', 'vaginit', 'prostate', 'testicular',
+                       'epididym', 'erectile', 'priapism', 'varicocele',
+                       'hydrocele', 'mastitis', 'polycystic ovarian', 'pelvic',
+                       'placenta', 'preeclampsia', 'abortion', 'ectopic']],
+  ['hematologic',     ['anemia', 'hemophilia', 'leukemia', 'lymphoma',
+                       'thrombocytopenia', 'polycythemia', 'thalassemia',
+                       'sickle cell', 'coagulation', 'bleeding disorder',
+                       'myelodysplastic', 'lymphedema', 'hypovolemia',
+                       'rhabdomyolysis', 'white blood cell', 'von willebrand',
+                       'fluid overload', 'spherocytosis', 'g6pd']],
+  ['oncologic',       ['cancer', 'tumor', 'malignant', 'sarcoma', 'carcinoid',
+                       'metastatic', 'myeloma', 'ependymoma', 'meningioma']],
+  ['ophthalmic',      ['eye', 'ocular', 'optic', 'retinal', 'cornea', 'corneal',
+                       'conjunctivit', 'glaucoma', 'cataract', 'macular',
+                       'blephar', 'stye', 'chalazion', 'iridocyclitis',
+                       'uveitis', 'scleritis', 'endophthalmitis', 'vitreous',
+                       'myopia', 'hyperopia', 'astigmatism', 'presbyopia',
+                       'amblyopia', 'pterygium', 'pinguecula', 'floaters']],
+  ['ent',             ['ear', 'otitis', 'hearing', 'tinnitus', 'sinus',
+                       'nasal', 'pharyngit', 'tonsil', 'laryngit', 'throat',
+                       'mastoid', 'cholesteatoma', 'labyrinthitis', 'meniere',
+                       'vertigo', 'bppv', 'vocal cord', 'nose disorder',
+                       'salivary', 'eustachian', 'otosclerosis']],
+  ['trauma_injury',   ['open wound', 'injury', 'crush', 'burn', 'frostbite',
+                       'heat stroke', 'heat exhaustion', 'hypothermia',
+                       'envenomation', 'insect bite', 'carbon monoxide',
+                       'birth trauma']],
+  ['autoimmune',      ['lupus', 'scleroderma', 'sjogren', 'vasculitis',
+                       'rheumatic fever', 'primary immunodeficiency',
+                       'hypergammaglobulinemia', 'amyloidosis']],
+  ['poisoning',       ['poison', 'overdose', 'intoxication', 'drug reaction',
+                       'drug poisoning', 'toxin']],
+  ['nutritional',     ['deficiency', 'scurvy', 'malnutrition',
+                       'protein deficiency', 'folate', 'vitamin']],
+  ['dental_oral',     ['dental', 'tooth', 'teeth', 'gum disease', 'oral',
+                       'jaw disorder', 'aphthous', 'temporomandibular']],
+];
+
+const DISEASE_GROUP_OVERRIDES_KB: Record<string, string> = {
+  'flu': 'respiratory',
+  'influenza': 'respiratory',
+  'common cold': 'respiratory',
+  'covid-19': 'respiratory',
+  'croup': 'ent',
+  'sarcoidosis': 'respiratory',
+  'empyema': 'respiratory',
+  'atelectasis': 'respiratory',
+  'pleural effusion': 'respiratory',
+  'high blood pressure': 'cardiovascular',
+  'deep vein thrombosis (dvt)': 'cardiovascular',
+  'varicose veins': 'cardiovascular',
+  'venous insufficiency': 'cardiovascular',
+  'raynaud disease': 'cardiovascular',
+  'sick sinus syndrome': 'cardiovascular',
+  'orthostatic hypotension': 'cardiovascular',
+  'hypertensive heart disease': 'cardiovascular',
+  'peripheral arterial disease': 'cardiovascular',
+  'peripheral arterial embolism': 'cardiovascular',
+  'tension headache': 'neurological',
+  'bell palsy': 'neurological',
+  'transient ischemic attack': 'neurological',
+  'essential tremor': 'neurological',
+  'cranial nerve palsy': 'neurological',
+  'hemiplegia': 'neurological',
+  'pseudotumor cerebri': 'neurological',
+  'syringomyelia': 'neurological',
+  'wernicke korsakoff syndrome': 'neurological',
+  'moyamoya disease': 'neurological',
+  'complex regional pain syndrome': 'neurological',
+  'tourette syndrome': 'neurological',
+  'tic (movement) disorder': 'neurological',
+  'autonomic nervous system disorder': 'neurological',
+  'brachial neuritis': 'neurological',
+  'drug withdrawal': 'psychiatric',
+  'neurosis': 'psychiatric',
+  'adjustment reaction': 'psychiatric',
+  'acute stress reaction': 'psychiatric',
+  'conversion disorder': 'psychiatric',
+  'infectious gastroenteritis': 'gastrointestinal',
+  'noninfectious gastroenteritis': 'gastrointestinal',
+  'gallstone': 'gastrointestinal',
+  'indigestion': 'gastrointestinal',
+  'hemorrhoids': 'gastrointestinal',
+  'dumping syndrome': 'gastrointestinal',
+  'meckel diverticulum': 'gastrointestinal',
+  'pyloric stenosis': 'gastrointestinal',
+  'zenker diverticulum': 'gastrointestinal',
+  'volvulus': 'gastrointestinal',
+  'ileus': 'gastrointestinal',
+  'peritonitis': 'gastrointestinal',
+  'ischemia of the bowel': 'gastrointestinal',
+  'intussusception': 'gastrointestinal',
+  'perirectal infection': 'gastrointestinal',
+  'hirschsprung disease': 'gastrointestinal',
+  'ascending cholangitis': 'gastrointestinal',
+  'gastrointestinal hemorrhage': 'gastrointestinal',
+  'gout': 'musculoskeletal',
+  'fibromyalgia': 'musculoskeletal',
+  'lumbago': 'musculoskeletal',
+  'sciatica': 'musculoskeletal',
+  'scoliosis': 'musculoskeletal',
+  'torticollis': 'musculoskeletal',
+  'bursitis': 'musculoskeletal',
+  'sprain or strain': 'musculoskeletal',
+  'plantar fasciitis': 'musculoskeletal',
+  'muscle spasm': 'musculoskeletal',
+  'restless leg syndrome': 'musculoskeletal',
+  'polymyalgia rheumatica': 'musculoskeletal',
+  'reactive arthritis': 'musculoskeletal',
+  'septic arthritis': 'musculoskeletal',
+  'juvenile rheumatoid arthritis': 'musculoskeletal',
+  'chickenpox': 'skin',
+  'shingles': 'skin',
+  'shingles (herpes zoster)': 'skin',
+  'cold sore': 'skin',
+  'impetigo': 'skin',
+  'viral exanthem': 'skin',
+  'viral warts': 'skin',
+  'rosacea': 'skin',
+  'pityriasis rosea': 'skin',
+  'hidradenitis suppurativa': 'skin',
+  'dyshidrosis': 'skin',
+  'necrotizing fasciitis': 'skin',
+  'sepsis': 'infectious',
+  'malaria': 'infectious',
+  'typhoid fever': 'infectious',
+  'dengue fever': 'infectious',
+  'lyme disease': 'infectious',
+  'mononucleosis': 'infectious',
+  'mumps': 'infectious',
+  'scarlet fever': 'infectious',
+  'herpangina': 'infectious',
+  'cat scratch disease': 'infectious',
+  'parasitic disease': 'infectious',
+  'pinworm infection': 'infectious',
+  'hpv': 'infectious',
+  'human immunodeficiency virus infection (hiv)': 'infectious',
+  'genital herpes': 'infectious',
+  'rocky mountain spotted fever': 'infectious',
+  'hypothyroidism': 'endocrine',
+  'hyperthyroidism': 'endocrine',
+  'goiter': 'endocrine',
+  'cushing syndrome': 'endocrine',
+  'obesity': 'endocrine',
+  'hyperlipidemia': 'endocrine',
+  'hypercholesterolemia': 'endocrine',
+  'urinary tract infection': 'renal_urinary',
+  'kidney stone': 'renal_urinary',
+  'hydronephrosis': 'renal_urinary',
+  'vesicoureteral reflux': 'renal_urinary',
+  'atonic bladder': 'renal_urinary',
+  'pregnancy': 'reproductive',
+  'menopause': 'reproductive',
+  'polycystic ovarian syndrome (pcos)': 'reproductive',
+  'premature ovarian failure': 'reproductive',
+  'vulvodynia': 'reproductive',
+  'priapism': 'reproductive',
+  'balanitis': 'reproductive',
+  'varicocele of the testicles': 'reproductive',
+  'hydrocele of the testicle': 'reproductive',
+  'sickle cell anemia': 'hematologic',
+  'sickle cell crisis': 'hematologic',
+  'aplastic anemia': 'hematologic',
+  'hemolytic anemia': 'hematologic',
+  'iron deficiency anemia': 'hematologic',
+  'anemia of chronic disease': 'hematologic',
+  'thalassemia': 'hematologic',
+  'lymphedema': 'hematologic',
+  'hypovolemia': 'hematologic',
+  'lung cancer': 'oncologic',
+  'breast cancer': 'oncologic',
+  'colorectal cancer': 'oncologic',
+  'stomach cancer': 'oncologic',
+  'liver cancer': 'oncologic',
+  'pancreatic cancer': 'oncologic',
+  'cervical cancer': 'oncologic',
+  'ovarian cancer': 'oncologic',
+  'prostate cancer': 'oncologic',
+  'brain cancer': 'oncologic',
+  'skin cancer': 'oncologic',
+  'dry eye of unknown cause': 'ophthalmic',
+  'floaters': 'ophthalmic',
+  'orbital cellulitis': 'ophthalmic',
+  'eye alignment disorder': 'ophthalmic',
+  'meniere disease': 'ent',
+  'tinnitus of unknown cause': 'ent',
+  'allergy': 'ent',
+  'allergy to animals': 'ent',
+  'seasonal allergies (hay fever)': 'ent',
+  'food allergy': 'ent',
+  'strep throat': 'ent',
+  'deviated nasal septum': 'ent',
+  'nasal polyp': 'ent',
+  'nose disorder': 'ent',
+  'cholesteatoma': 'ent',
+  'ear wax impaction': 'ent',
+  'ear drum damage': 'ent',
+  'salivary gland disorder': 'ent',
+  'vocal cord polyp': 'ent',
+  'tracheitis': 'ent',
+  'peritonsillar abscess': 'ent',
+  'open wound due to trauma': 'trauma_injury',
+  'crushing injury': 'trauma_injury',
+  'birth trauma': 'trauma_injury',
+  'insect bite': 'trauma_injury',
+  'frostbite': 'trauma_injury',
+  'heat stroke': 'trauma_injury',
+  'heat exhaustion': 'trauma_injury',
+  'hypothermia': 'trauma_injury',
+  'burn': 'trauma_injury',
+  'systemic lupus erythematosis (sle)': 'autoimmune',
+  'scleroderma': 'autoimmune',
+  'sjogren syndrome': 'autoimmune',
+  'vasculitis': 'autoimmune',
+  'primary immunodeficiency': 'autoimmune',
+  'amyloidosis': 'autoimmune',
+  'carbon monoxide poisoning': 'poisoning',
+  'drug reaction': 'poisoning',
+  'drug poisoning due to medication': 'poisoning',
+  'insulin overdose': 'poisoning',
+  'vitamin a deficiency': 'nutritional',
+  'vitamin b12 deficiency': 'nutritional',
+  'vitamin d deficiency': 'nutritional',
+  'scurvy': 'nutritional',
+  'eating disorder': 'nutritional',
+  'magnesium deficiency': 'nutritional',
+  'folate deficiency': 'nutritional',
+  'wilson disease': 'nutritional',
+  'dental caries': 'dental_oral',
+  'tooth abscess': 'dental_oral',
+  'tooth disorder': 'dental_oral',
+  'gum disease': 'dental_oral',
+  'aphthous ulcer': 'dental_oral',
+  'oral thrush (yeast infection)': 'dental_oral',
+  'temporomandibular joint disorder': 'dental_oral',
+  'jaw disorder': 'dental_oral',
+};
+
+export function getDiseaseGroup(diseaseName: string): string {
+  const key = diseaseName.toLowerCase().trim();
+  const override = DISEASE_GROUP_OVERRIDES_KB[key];
+  if (override) return override;
+  for (const [group, keywords] of GROUP_KEYWORD_RULES_TS) {
+    if (keywords.some(kw => key.includes(kw))) return group;
+  }
+  return 'other';
+}
+
+export function getDiseasesByGroup(groupName: string): string[] {
+  const diseases = medicalKnowledge as Disease[];
+  return diseases
+    .filter(d => getDiseaseGroup(d.disease) === groupName)
+    .map(d => d.disease);
+}
+
+export function searchDiseasesInGroup(symptoms: string[], groupName: string): SearchResult[] {
+  const groupNames = new Set(getDiseasesByGroup(groupName).map(d => d.toLowerCase()));
+  const diseases = (medicalKnowledge as Disease[]).filter(
+    d => groupNames.has(d.disease.toLowerCase())
+  );
+
+  if (diseases.length < 3) {
+    return searchDiseases(symptoms);
+  }
+
+  const results: SearchResult[] = diseases.map(disease => {
+    const relevance = calculateSimilarity(symptoms, disease.symptoms);
+    const normalizedInput = symptoms.map(normalizeText);
+    const matched = disease.symptoms.filter(ds =>
+      normalizedInput.some(is => is.includes(normalizeText(ds)) || normalizeText(ds).includes(is))
+    );
+    const dsProfile = datasetService.getDiseaseProfile(disease.disease);
+    return {
+      disease: disease.disease,
+      relevance,
+      matchedSymptoms: matched,
+      description: disease.description,
+      treatments: disease.treatments,
+      severity: disease.severity,
+      datasetRecords: dsProfile?.totalRecords,
+    };
+  });
+
+  return results
+    .filter(r => r.relevance >= 0)
+    .sort((a, b) => b.relevance - a.relevance)
+    .slice(0, 10);
 }
 
 export function augmentPrompt(symptoms: string[], userQuery?: string): string {
