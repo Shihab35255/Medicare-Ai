@@ -76,7 +76,8 @@ npm run dev                     # Starts on http://localhost:8080
 
 ### Optional: ML Service (improves accuracy)
 ```bash
-python ml_service.py           # Auto-loads pre-trained models from ./models/
+python train_models.py         # Generate local model files (see dataset note below)
+python ml_service.py           # Load generated models from ./models/
 ```
 
 ## 🔌 Ports
@@ -93,8 +94,10 @@ python ml_service.py           # Auto-loads pre-trained models from ./models/
 - `backend/routes/predict.ts` — Orchestrates RAG → LLM → ML prediction pipeline
 - `ml_service.py` — Python ensemble ML service (RF, SVM, NB)
 - `backend/data/medical-knowledge.json` — RAG knowledge base
-- `datasets/Final_Augmented_dataset_Diseases_and_Symptoms.csv` — Training + RAG dataset
-- `models/` — Pre-trained ML model files (.pkl)
+- `datasets/Final_Augmented_dataset_Diseases_and_Symptoms.csv` — Optional local training dataset (not tracked because it is over 180 MB)
+- `models/` — Generated local ML model files (`.pkl`, not tracked)
+
+The ML model files and augmented training dataset are intentionally excluded from GitHub to keep repository history manageable. Keep the dataset at the path above before running `python train_models.py`; that script regenerates the local model files.
 
 ## 🧠 AI Stack: RAG + LLM (Primary) + ML (Secondary)
 
